@@ -365,6 +365,8 @@ const Analytics = (() => {
   let seq = 0;
   let playRequestAt = null, firstFrameAt = null;
   let bufferingStartAt = null;
+  let bufferingStartCause = null;
+  let pendingSeek = false;
   let totalBufferingMs = 0, bufferingCount = 0, bitrateChangeCount = 0;
   let currentBitrateKbps = 0, currentResolution = 'unknown';
   let liveJoinStart = null;
@@ -548,18 +550,25 @@ const Analytics = (() => {
     },
 
     onBufferingStart(posS, cause = 'network') {
+      const bufferingCause = pendingSeek ? 'seek' : cause;
       if (bufferingStartAt) return;
-      if (!firstFrameAt && cause !== 'seek') return; // ignora startup
+      if (!firstFrameAt && bufferingCause !== 'seek') return; // ignora startup
       bufferingStartAt = nowMs();
-      emit('BUFFERING_START', { playback_position_s: posS, cause });
+      bufferingStartCause = bufferingCause;
+      pendingSeek = false;
+      emit('BUFFERING_START', { playback_position_s: posS, cause: bufferingCause });
     },
 
     onBufferingEnd(posS) {
       if (!bufferingStartAt) return;
       const dur = nowMs() - bufferingStartAt;
-      totalBufferingMs += dur;
-      bufferingCount++;
+      const wasSeekBuffering = bufferingStartCause === 'seek';
+      if (!wasSeekBuffering) {
+        totalBufferingMs += dur;
+        bufferingCount++;
+      }
       bufferingStartAt = null;
+      bufferingStartCause = null;
       emit('BUFFERING_END', { playback_position_s: posS, buffering_duration_ms: dur });
       updateUI();
     },
@@ -593,7 +602,12 @@ const Analytics = (() => {
 
     onSeek(fromS, toS) {
       if (!Number.isFinite(fromS) || !Number.isFinite(toS) || Math.abs(toS - fromS) < 0.1) return;
+      pendingSeek = true;
       emit('SEEK', { from_position_s: fromS, to_position_s: toS });
+    },
+
+    onSeekComplete() {
+      pendingSeek = false;
     },
 
     onLiveLatency(latencyS, posS) {
@@ -643,7 +657,7 @@ function logEvent(event) {
   else if (event.event_type === 'BUFFERING_END')
     detail = `durata: ${p.buffering_duration_ms}ms`;
   else if (event.event_type === 'CDN_REQUEST')
-    detail = `${p.cdn_name} | ${formatMbps(p.throughput_kbps)} | ${Math.round(p.duration_ms)}ms`;
+    detail = `${p.cdn_name} · ${p.media_type ?? 'video'} | ${formatMbps(p.throughput_kbps)} | ${Math.round(p.duration_ms)}ms`;
   else if (event.event_type === 'JOIN_TIME')
     detail = `${p.join_time_ms}ms`;
   else if (event.event_type === 'SEEK')
@@ -697,6 +711,7 @@ async function startPlayer(channelKey) {
   const video   = document.getElementById('video');
   video.addEventListener('timeupdate', updateDvrControl);
   video.addEventListener('loadedmetadata', updateDvrControl);
+  video.addEventListener('seeked', () => Analytics.onSeekComplete());
 
   // Aggiorna UI header
   document.getElementById('header-logo').textContent = channel.title;
@@ -775,10 +790,15 @@ async function startPlayer(channelKey) {
     const ttfbMs = stats.loading.first - stats.loading.start;
     const kbps   = durMs > 0 ? Math.round((bytes * 8) / durMs) : 0;
     let cdn = 'unknown';
+    let mediaType = 'video';
+    const fragmentType = data.frag?.type ?? data.type;
+    if (fragmentType === 'audio') mediaType = 'audio';
+    else if (fragmentType === 'subtitle') mediaType = 'subtitle';
     try {
       const h = new URL(data.frag.url).hostname.toLowerCase();
-      cdn = h.includes('msvdn') ? 'msvdn'
-          : h.includes('akamai') || h.includes('akamaized') ? 'akamai'
+      cdn = h.includes('msvdn') ? 'mainstreaming'
+          : h.includes('akamaized') || h.includes('akamai') ? 'akamai'
+          : h.includes('netrw') ? 'raiway'
           : h.includes('cloudfront') ? 'cloudfront'
           : h.includes('fastly') ? 'fastly'
           : h;
@@ -786,7 +806,7 @@ async function startPlayer(channelKey) {
     document.getElementById('m-cdn').textContent = cdn;
     document.getElementById('m-throughput').textContent = formatMbps(kbps);
     Analytics.onCdnRequest({
-      cdn_name: cdn, request_type: 'segment',
+      cdn_name: cdn, request_type: 'segment', media_type: mediaType,
       http_status: 200, ttfb_ms: ttfbMs, duration_ms: durMs,
       bytes, throughput_kbps: kbps, sequence_number: data.frag?.sn
     });

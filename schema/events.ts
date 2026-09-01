@@ -249,6 +249,8 @@ export interface PayloadCdnRequest {
   cdn_name: string;
   /** 'manifest' or 'segment' or 'key' (DRM) */
   request_type: 'manifest' | 'segment' | 'key';
+  /** Media carried by the fragment, when the player exposes track information */
+  media_type?: 'video' | 'audio' | 'subtitle';
   /** Full URL of the request. Strip tokens/query params if sensitive. */
   url?: string;
   http_status: number;
