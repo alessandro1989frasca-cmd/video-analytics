@@ -1,0 +1,92 @@
+version: '3.9'
+
+# Full local analytics stack:
+#   collector  — Fastify ingestion API (port 3000)
+#   clickhouse — ClickHouse OLAP database (ports 8123 HTTP, 9000 native)
+#   grafana    — Dashboard (port 3001)
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # ClickHouse — time-series / columnar storage
+  # ---------------------------------------------------------------------------
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.4-alpine
+    container_name: analytics-clickhouse
+    environment:
+      CLICKHOUSE_DB: analytics
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+      CLICKHOUSE_PASSWORD: ""
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      # Auto-run schema on first start
+      - ./clickhouse/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./clickhouse/materialized-views.sql:/docker-entrypoint-initdb.d/02-views.sql:ro
+    ports:
+      - "8123:8123"   # HTTP interface (used by @clickhouse/client)
+      - "9000:9000"   # Native TCP interface
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Collector API
+  # ---------------------------------------------------------------------------
+  collector:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: analytics-collector
+    environment:
+      PORT: 3000
+      HOST: 0.0.0.0
+      LOG_LEVEL: info
+      CLICKHOUSE_HOST: http://clickhouse:8123
+      CLICKHOUSE_DATABASE: analytics
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+      GEOIP_DB_PATH: /opt/geoip/GeoLite2-City.mmdb
+      GEOIP_ASN_DB_PATH: /opt/geoip/GeoLite2-ASN.mmdb
+      NODE_ENV: production
+    volumes:
+      # Mount GeoIP databases — download from maxmind.com separately
+      - ./geoip:/opt/geoip:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Grafana — dashboards
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana-oss:11.1.0
+    container_name: analytics-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: analytics
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: grafana-clickhouse-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - clickhouse
+    restart: unless-stopped
+
+volumes:
+  clickhouse-data:
+  grafana-data:
