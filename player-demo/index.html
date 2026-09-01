@@ -169,7 +169,7 @@
 <body>
 
 <header>
-  <div class="logo" id="header-logo">RAI 1</div>
+  <div class="logo" id="header-logo">RAI News</div>
   <div class="badge">LIVE</div>
   <div style="flex:1"></div>
   <div style="font-size:11px;color:#444;">Video QoE Analytics Demo</div>
@@ -179,14 +179,14 @@
 <div class="channel-bar">
   <label>Canale:</label>
 
-  <button class="ch-btn active" data-channel="rai1" onclick="switchChannel('rai1', this)">
-    <span class="ch-dot"></span> RAI 1
+  <button class="ch-btn active" data-channel="rainews" onclick="switchChannel('rainews', this)">
+    <span class="ch-dot"></span> RAI News
   </button>
   <button class="ch-btn" data-channel="rai2" onclick="switchChannel('rai2', this)">
     <span class="ch-dot"></span> RAI 2
   </button>
-  <button class="ch-btn" data-channel="rainews" onclick="switchChannel('rainews', this)">
-    <span class="ch-dot"></span> RAI News
+  <button class="ch-btn" data-channel="rai1" onclick="switchChannel('rai1', this)">
+    <span class="ch-dot"></span> RAI 1
   </button>
 
   <!-- Viewer ID — persistente su localStorage -->
@@ -203,7 +203,7 @@
       <!-- controls rimosso — usiamo la barra custom sotto -->
       <video id="video" autoplay muted playsinline></video>
       <div class="live-badge"><span style="width:7px;height:7px;background:#fff;border-radius:50%;animation:blink 1.2s infinite;display:inline-block"></span>&nbsp;LIVE</div>
-      <div class="channel-name-overlay" id="channel-overlay">RAI 1</div>
+      <div class="channel-name-overlay" id="channel-overlay">RAI News</div>
       <!-- click sul video = play/pause -->
       <div id="video-overlay" style="position:absolute;inset:0;cursor:pointer;" onclick="togglePlayPause()"></div>
     </div>
@@ -231,10 +231,10 @@
 
     <div class="metrics-bar">
       <div class="metric"><div class="label">Startup</div><div class="value" id="m-startup">—</div></div>
-      <div class="metric"><div class="label">Bitrate</div><div class="value" id="m-bitrate">—</div></div>
+  <div class="metric"><div class="label">Bitrate (Mbps)</div><div class="value" id="m-bitrate">—</div></div>
       <div class="metric"><div class="label">Rebuffer</div><div class="value" id="m-rebuffer">0</div></div>
       <div class="metric"><div class="label">CDN</div><div class="value" id="m-cdn" style="font-size:12px">—</div></div>
-      <div class="metric"><div class="label">Throughput</div><div class="value" id="m-throughput">—</div></div>
+  <div class="metric"><div class="label">Throughput (Mbps)</div><div class="value" id="m-throughput">—</div></div>
       <div class="metric"><div class="label">Sessioni</div><div class="value" id="m-sessions">0</div></div>
     </div>
 
@@ -276,6 +276,10 @@ const CONFIG = {
   dryRun:            false
 };
 
+function formatMbps(kbps) {
+  return kbps > 0 ? `${(kbps / 1000).toFixed(2)} Mbps` : '—';
+}
+
 // Catalogo canali
 const CHANNELS = {
   rai1: {
@@ -295,7 +299,7 @@ const CHANNELS = {
   }
 };
 
-let currentChannelKey = 'rai1';
+let currentChannelKey = 'rainews';
 let hlsInstance = null;
 let sessionCount = 0;
 
@@ -348,7 +352,7 @@ const Analytics = (() => {
     document.getElementById('m-rebuffer').className = 'value ' +
       (bufferingCount === 0 ? 'good' : bufferingCount < 3 ? 'warn' : 'bad');
     document.getElementById('m-bitrate').textContent =
-      currentBitrateKbps > 0 ? Math.round(currentBitrateKbps) + ' kbps' : '—';
+      formatMbps(currentBitrateKbps);
     document.getElementById('m-sessions').textContent = sessionCount;
   }
 
@@ -599,13 +603,13 @@ function logEvent(event) {
   else if (event.event_type === 'FIRST_FRAME')
     detail = `startup: ${p.startup_time_ms}ms`;
   else if (event.event_type === 'HEARTBEAT')
-    detail = `pos: ${p.playback_position_s?.toFixed(0)}s | ${Math.round(p.current_bitrate_kbps)}kbps`;
+    detail = `pos: ${p.playback_position_s?.toFixed(0)}s | ${formatMbps(p.current_bitrate_kbps)}`;
   else if (event.event_type === 'BITRATE_CHANGE')
-    detail = `${Math.round(p.previous_bitrate_kbps)}→${Math.round(p.new_bitrate_kbps)}kbps | ${p.new_resolution} [${p.reason}]`;
+    detail = `${formatMbps(p.previous_bitrate_kbps)} → ${formatMbps(p.new_bitrate_kbps)} | ${p.new_resolution} [${p.reason}]`;
   else if (event.event_type === 'BUFFERING_END')
     detail = `durata: ${p.buffering_duration_ms}ms`;
   else if (event.event_type === 'CDN_REQUEST')
-    detail = `${p.cdn_name} | ${Math.round(p.throughput_kbps)}kbps | ${Math.round(p.duration_ms)}ms`;
+    detail = `${p.cdn_name} | ${formatMbps(p.throughput_kbps)} | ${Math.round(p.duration_ms)}ms`;
   else if (event.event_type === 'JOIN_TIME')
     detail = `${p.join_time_ms}ms`;
   else if (event.event_type === 'ERROR')
@@ -742,7 +746,7 @@ async function startPlayer(channelKey) {
           : h;
     } catch {}
     document.getElementById('m-cdn').textContent = cdn;
-    document.getElementById('m-throughput').textContent = kbps + ' kbps';
+    document.getElementById('m-throughput').textContent = formatMbps(kbps);
     Analytics.onCdnRequest({
       cdn_name: cdn, request_type: 'segment',
       http_status: 200, ttfb_ms: ttfbMs, duration_ms: durMs,
@@ -772,7 +776,7 @@ function buildQualityButtons(hls, levels) {
     btn.className = 'q-btn';
     btn.dataset.level = i;
     btn.textContent = res;
-    btn.title = `${Math.round(l.bitrate/1000)} kbps — ${l.width}x${l.height}`;
+    btn.title = `${formatMbps(l.bitrate / 1000)} — ${l.width}x${l.height}`;
     container.appendChild(btn);
   });
   container.onclick = e => {
@@ -897,7 +901,7 @@ window.addEventListener('visibilitychange',() => {
 // =============================================================================
 const viewerId = getOrCreateViewerId();
 Analytics.init(viewerId);
-startPlayer('rai1');
+startPlayer('rainews');
 </script>
 
 </body>
