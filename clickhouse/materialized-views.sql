@@ -131,6 +131,7 @@ SELECT
     session_id,
     JSONExtractString(payload, 'cdn_name')          AS cdn_name,
     JSONExtractString(payload, 'request_type')      AS request_type,
+    JSONExtractString(payload, 'media_type')        AS media_type,
     CAST(COALESCE(JSONExtractInt(payload, 'http_status'), 0) AS UInt16) AS http_status,
     CAST(JSONExtractFloat(payload, 'ttfb_ms')       AS Float32)         AS ttfb_ms,
     CAST(JSONExtractFloat(payload, 'duration_ms')   AS Float32)         AS duration_ms,
@@ -161,9 +162,15 @@ SELECT
     country_code,
     CAST(JSONExtractFloat(payload, 'playback_position_s')   AS Float32) AS playback_position_s,
     CAST(JSONExtractFloat(payload, 'current_bitrate_kbps')  AS Float32) AS current_bitrate_kbps,
+    JSONExtractString(payload, 'current_resolution')        AS current_resolution,
     CAST(JSONExtractBool(payload,  'is_buffering')          AS UInt8)   AS is_buffering,
     CAST(JSONExtractFloat(payload, 'rebuffer_time_ms')      AS Float32) AS rebuffer_time_ms,
-    CAST(COALESCE(JSONExtractFloat(payload, 'live_latency_s'), 0) AS Float32) AS live_latency_s
+    CAST(COALESCE(JSONExtractFloat(payload, 'live_latency_s'), 0) AS Float32) AS live_latency_s,
+    CAST(COALESCE(JSONExtractFloat(payload, 'buffer_length_s'), 0) AS Float32) AS buffer_length_s,
+    CAST(COALESCE(JSONExtractFloat(payload, 'bandwidth_estimate_kbps'), 0) AS Float32) AS bandwidth_estimate_kbps,
+    CAST(COALESCE(JSONExtractInt(payload, 'decoded_video_frames'), 0) AS UInt64) AS decoded_video_frames,
+    CAST(COALESCE(JSONExtractInt(payload, 'dropped_video_frames'), 0) AS UInt64) AS dropped_video_frames,
+    CAST(COALESCE(JSONExtractFloat(payload, 'playback_rate'), 1) AS Float32) AS playback_rate
 FROM analytics_events
 WHERE event_type = 'HEARTBEAT';
 

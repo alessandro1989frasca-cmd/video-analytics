@@ -21,6 +21,7 @@ import type {
   NetworkInfo,
   DeviceInfo
 } from './types';
+import type { PlaybackMetrics } from './types';
 import type {
   PayloadSessionStart,
   PayloadHeartbeat,
@@ -68,6 +69,7 @@ export class SessionManager {
       firstFrameAt: null,
       lastActivityAt: now(),
       bufferingStartAt: null,
+      bufferingStartCause: null,
       totalBufferingMs: 0,
       bufferingCount: 0,
       currentBitrateKbps: 0,
@@ -79,7 +81,8 @@ export class SessionManager {
       content,
       player,
       network,
-      device
+      device,
+      playbackMetrics: {}
     };
 
     this._emitEvent('SESSION_START', payload);
@@ -142,10 +145,15 @@ export class SessionManager {
   /** Call when playback stalls (rebuffering). */
   onBufferingStart(positionS: number, cause?: string): void {
     if (!this.state || this.state.bufferingStartAt !== null) return;
+    const effectiveCause =
+      !this.state.hasFirstFrame && (cause === undefined || cause === 'network')
+        ? 'initial'
+        : cause ?? 'unknown';
     this.state.bufferingStartAt = now();
+    this.state.bufferingStartCause = effectiveCause as SessionState['bufferingStartCause'];
     this._emitEvent('BUFFERING_START', {
       playback_position_s: positionS,
-      cause: cause as any ?? 'unknown'
+      cause: effectiveCause as any
     });
     this._resetZombieTimer();
   }
@@ -154,9 +162,15 @@ export class SessionManager {
   onBufferingEnd(positionS: number): void {
     if (!this.state || this.state.bufferingStartAt === null) return;
     const durationMs = now() - this.state.bufferingStartAt;
-    this.state.totalBufferingMs += durationMs;
-    this.state.bufferingCount++;
+    const countsAsRebuffer =
+      this.state.bufferingStartCause !== 'initial' &&
+      this.state.bufferingStartCause !== 'seek';
+    if (countsAsRebuffer) {
+      this.state.totalBufferingMs += durationMs;
+      this.state.bufferingCount++;
+    }
     this.state.bufferingStartAt = null;
+    this.state.bufferingStartCause = null;
     this._emitEvent('BUFFERING_END', {
       playback_position_s: positionS,
       buffering_duration_ms: durationMs
@@ -233,6 +247,7 @@ export class SessionManager {
     throughputKbps: number;
     url?: string;
     sequenceNumber?: number;
+    mediaType?: 'video' | 'audio' | 'subtitle' | 'muxed';
   }): void {
     if (!this.state) return;
     this._emitEvent('CDN_REQUEST', {
@@ -244,7 +259,8 @@ export class SessionManager {
       bytes: data.bytes,
       throughput_kbps: data.throughputKbps,
       url: data.url,
-      sequence_number: data.sequenceNumber
+      sequence_number: data.sequenceNumber,
+      media_type: data.mediaType
     });
   }
 
@@ -381,7 +397,13 @@ export class SessionManager {
       current_bitrate_kbps: this.state.currentBitrateKbps,
       current_resolution: this.state.currentResolution,
       is_buffering: this.state.bufferingStartAt !== null,
-      rebuffer_time_ms: this.state.totalBufferingMs
+      rebuffer_time_ms: this.state.totalBufferingMs,
+      buffer_length_s: this.state.playbackMetrics.bufferLengthS,
+      bandwidth_estimate_kbps: this.state.playbackMetrics.bandwidthEstimateKbps,
+      decoded_video_frames: this.state.playbackMetrics.decodedVideoFrames,
+      dropped_video_frames: this.state.playbackMetrics.droppedVideoFrames,
+      playback_rate: this.state.playbackMetrics.playbackRate,
+      live_latency_s: this.state.playbackMetrics.liveLatencyS
     };
     this._emitEvent('HEARTBEAT', payload);
     this.state.lastActivityAt = now();
@@ -393,6 +415,21 @@ export class SessionManager {
     this.state.playbackPositionS = positionS;
     if (bitrateKbps !== undefined) this.state.currentBitrateKbps = bitrateKbps;
     if (resolution !== undefined) this.state.currentResolution = resolution;
+    this.state.lastActivityAt = now();
+  }
+
+  /** Update optional playback-quality signals used by heartbeat snapshots. */
+  updatePlaybackMetrics(metrics: PlaybackMetrics): void {
+    if (!this.state) return;
+    const current = this.state.playbackMetrics;
+    const finite = (value: unknown): value is number =>
+      typeof value === 'number' && Number.isFinite(value);
+    if (finite(metrics.bufferLengthS)) current.bufferLengthS = metrics.bufferLengthS;
+    if (finite(metrics.bandwidthEstimateKbps)) current.bandwidthEstimateKbps = metrics.bandwidthEstimateKbps;
+    if (finite(metrics.decodedVideoFrames)) current.decodedVideoFrames = metrics.decodedVideoFrames;
+    if (finite(metrics.droppedVideoFrames)) current.droppedVideoFrames = metrics.droppedVideoFrames;
+    if (finite(metrics.playbackRate)) current.playbackRate = metrics.playbackRate;
+    if (finite(metrics.liveLatencyS)) current.liveLatencyS = metrics.liveLatencyS;
     this.state.lastActivityAt = now();
   }
 

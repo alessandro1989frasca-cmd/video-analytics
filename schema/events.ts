@@ -199,6 +199,16 @@ export interface PayloadHeartbeat {
   rebuffer_time_ms: number;
   /** For live: current end-to-end latency in seconds */
   live_latency_s?: number;
+  /** Seconds of media currently buffered ahead of the playhead */
+  buffer_length_s?: number;
+  /** Player/network bandwidth estimate, when exposed by the playback engine */
+  bandwidth_estimate_kbps?: number;
+  /** Number of decoded video frames since playback started */
+  decoded_video_frames?: number;
+  /** Number of dropped video frames since playback started */
+  dropped_video_frames?: number;
+  /** Current playback speed, e.g. 1.0 */
+  playback_rate?: number;
 }
 
 export interface PayloadBufferingStart {

@@ -5,6 +5,8 @@
 
 import type { AnalyticsEvent, EventBatch, EventType, Platform, ContentInfo, PlayerInfo, NetworkInfo, DeviceInfo } from '../../schema/events';
 
+export type { ContentInfo, PlayerInfo, NetworkInfo, DeviceInfo } from '../../schema/events';
+
 export type { AnalyticsEvent, EventBatch };
 
 // ---------------------------------------------------------------------------
@@ -67,6 +69,15 @@ export type ResolvedConfig = Required<Omit<SdkConfig, 'onDroppedBatch'>> & {
   onDroppedBatch?: SdkConfig['onDroppedBatch'];
 };
 
+export interface PlaybackMetrics {
+  bufferLengthS?: number;
+  bandwidthEstimateKbps?: number;
+  decodedVideoFrames?: number;
+  droppedVideoFrames?: number;
+  playbackRate?: number;
+  liveLatencyS?: number;
+}
+
 // ---------------------------------------------------------------------------
 // Session state — tracked in memory during a playback session
 // ---------------------------------------------------------------------------
@@ -82,6 +93,8 @@ export interface SessionState {
   lastActivityAt: number;
   /** epoch ms when the current buffering event started */
   bufferingStartAt: number | null;
+  /** Cause associated with the current buffering interval */
+  bufferingStartCause: 'initial' | 'seek' | 'bitrate_switch' | 'network' | 'unknown' | null;
   /** accumulated buffering ms in this session */
   totalBufferingMs: number;
   /** number of buffering events so far */
@@ -106,6 +119,7 @@ export interface SessionState {
   network: NetworkInfo;
   /** device info for this session */
   device: DeviceInfo;
+  playbackMetrics: PlaybackMetrics;
 }
 
 // ---------------------------------------------------------------------------

@@ -215,6 +215,8 @@ export class ShakaAdapter extends WebAdapter {
   private _extractCdnFromUrl(url: string): string | undefined {
     try {
       const hostname = new URL(url).hostname.toLowerCase();
+      if (hostname.includes('msvdn')) return 'mainstreaming';
+      if (hostname.includes('netrw')) return 'raiway';
       if (hostname.includes('akamai') || hostname.includes('akamaized')) return 'akamai';
       if (hostname.includes('cloudfront'))  return 'cloudfront';
       if (hostname.includes('fastly'))      return 'fastly';

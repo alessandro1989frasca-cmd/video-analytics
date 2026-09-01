@@ -543,12 +543,30 @@ const Analytics = (() => {
       }
       heartbeatTimer = setInterval(() => {
         const v = document.getElementById('video');
+        const quality = typeof v.getVideoPlaybackQuality === 'function'
+          ? v.getVideoPlaybackQuality()
+          : null;
+        let bufferLength = 0;
+        for (let i = 0; i < v.buffered.length; i++) {
+          if (v.currentTime >= v.buffered.start(i) && v.currentTime <= v.buffered.end(i)) {
+            bufferLength = Math.max(0, v.buffered.end(i) - v.currentTime);
+            break;
+          }
+        }
+        const bandwidthEstimate = hlsInstance?.bandwidthEstimate;
+        const liveLatency = hlsInstance?.latency;
         emit('HEARTBEAT', {
           playback_position_s:  v.currentTime,
           current_bitrate_kbps: currentBitrateKbps,
           current_resolution:   currentResolution,
           is_buffering:         bufferingStartAt !== null,
-          rebuffer_time_ms:     totalBufferingMs
+          rebuffer_time_ms:     totalBufferingMs,
+          buffer_length_s:      bufferLength,
+          bandwidth_estimate_kbps: Number.isFinite(bandwidthEstimate) ? bandwidthEstimate / 1000 : undefined,
+          decoded_video_frames: Number.isFinite(quality?.totalVideoFrames) ? quality.totalVideoFrames : undefined,
+          dropped_video_frames: Number.isFinite(quality?.droppedVideoFrames) ? quality.droppedVideoFrames : undefined,
+          playback_rate:        v.playbackRate,
+          live_latency_s:       Number.isFinite(liveLatency) ? liveLatency : undefined
         });
       }, CONFIG.heartbeatIntervalMs);
     },

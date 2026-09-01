@@ -68,6 +68,7 @@ class ExoPlayerAdapter(
     // Track buffering state independently — ExoPlayer can toggle STATE_BUFFERING
     // multiple times without a STATE_READY in between.
     private var isBuffering = false
+    private var droppedVideoFrames: Long = 0
 
     init {
         AnalyticsLogger.isDebug = config.debug
@@ -118,6 +119,7 @@ class ExoPlayerAdapter(
     /** Fired when ExoPlayer is first prepared — good proxy for play intent. */
     override fun onPlaybackStateChanged(eventTime: EventTime, state: Int) {
         val posS = eventTime.currentPlaybackPositionMs / 1000.0
+        updatePlaybackMetrics()
 
         when (state) {
             Player.STATE_BUFFERING -> {
@@ -153,6 +155,7 @@ class ExoPlayerAdapter(
      */
     override fun onIsPlayingChanged(eventTime: EventTime, isPlaying: Boolean) {
         val posS = eventTime.currentPlaybackPositionMs / 1000.0
+        updatePlaybackMetrics()
         if (isPlaying) {
             session.onResume(posS)
         } else {
@@ -228,6 +231,11 @@ class ExoPlayerAdapter(
         prevVideoRes = newRes
     }
 
+    override fun onDroppedVideoFrames(eventTime: EventTime, droppedFrames: Int, elapsedMs: Long) {
+        droppedVideoFrames += droppedFrames.toLong()
+        updatePlaybackMetrics()
+    }
+
     /**
      * Fired on every seek (position discontinuity of type SEEK or SEEK_ADJUSTMENT).
      */
@@ -269,6 +277,12 @@ class ExoPlayerAdapter(
         val cdnName = cdnOverride
             ?: guessCdn(loadEventInfo.uri?.toString() ?: "")
             ?: "unknown"
+        val mediaType = when (mediaLoadData.trackType) {
+            C.TRACK_TYPE_VIDEO -> "video"
+            C.TRACK_TYPE_AUDIO -> "audio"
+            C.TRACK_TYPE_TEXT  -> "subtitle"
+            else               -> null
+        }
 
         session.onCdnRequest(
             cdnName = cdnName,
@@ -278,7 +292,8 @@ class ExoPlayerAdapter(
             durationMs = durationMs,
             bytes = bytes,
             throughputKbps = throughputKbps,
-            sequenceNumber = mediaLoadData.mediaStartTimeMs.toInt().takeIf { it >= 0 }
+            sequenceNumber = mediaLoadData.mediaStartTimeMs.toInt().takeIf { it >= 0 },
+            mediaType = mediaType
         )
     }
 
@@ -405,11 +420,22 @@ class ExoPlayerAdapter(
         }
     }
 
+    private fun updatePlaybackMetrics() {
+        val bufferLengthS = ((player.bufferedPosition - player.currentPosition).coerceAtLeast(0L)) / 1000.0
+        session.updatePlaybackMetrics(
+            bufferLengthS = bufferLengthS,
+            droppedVideoFrames = droppedVideoFrames,
+            playbackRate = player.playbackParameters.speed.toDouble()
+        )
+    }
+
     private fun guessCdn(urlString: String): String? {
         return try {
             val host = URL(urlString).host?.lowercase() ?: return null
             when {
                 host.contains("akamai") || host.contains("akamaized") -> "akamai"
+                host.contains("msvdn")       -> "mainstreaming"
+                host.contains("netrw")       -> "raiway"
                 host.contains("cloudfront")  -> "cloudfront"
                 host.contains("fastly")      -> "fastly"
                 host.contains("cloudflare")  -> "cloudflare"

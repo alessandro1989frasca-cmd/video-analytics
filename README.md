@@ -379,6 +379,7 @@ Read-time merge views (`v_qoe_hourly`, `v_concurrent_viewers`) call `*Merge()` a
 | 6 | Error Drill-down | Error distribution, VSF breakdown | `analytics_errors` |
 | 7 | Live Streaming | Join time, live latency, manifest errors | `analytics_events` |
 | 8 | VOD Analytics | Completion rate, drop-off curve | `analytics_sessions` |
+| 9 | Playback Quality | Buffer health, frame drops, bandwidth estimate | `analytics_heartbeats` |
 
 All SQL queries are in `grafana/queries/`. Variable definitions and alert rules are in `00_grafana_variables.sql`.
 

@@ -279,6 +279,8 @@ export class TizenAdapter {
     private _guessCdn(url: string): string | undefined {
         try {
             const host = new URL(url).hostname.toLowerCase();
+            if (host.includes('msvdn')) return 'mainstreaming';
+            if (host.includes('netrw')) return 'raiway';
             if (host.includes('akamai') || host.includes('akamaized')) return 'akamai';
             if (host.includes('cloudfront')) return 'cloudfront';
             if (host.includes('fastly'))     return 'fastly';

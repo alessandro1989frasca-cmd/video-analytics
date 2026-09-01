@@ -386,6 +386,7 @@ public final class AVPlayerAdapter: NSObject {
             bitrateKbps: reportedKbps,
             resolution: videoResolution()
         )
+        sessionManager.updatePlaybackMetrics(bandwidthEstimateKbps: observedKbps)
 
         AnalyticsLogger.debug(
             "AccessLog: cdn=\(cdnName) observed=\(Int(observedKbps))kbps indicated=\(Int(indicatedKbps))kbps"
@@ -403,6 +404,10 @@ public final class AVPlayerAdapter: NSObject {
             guard let self else { return }
             let pos = CMTimeGetSeconds(time)
             self.sessionManager.updatePlaybackPosition(pos)
+            self.sessionManager.updatePlaybackMetrics(
+                bufferLengthS: self.bufferLength(),
+                playbackRate: Double(self.options.player.rate)
+            )
         }
     }
 
@@ -451,6 +456,12 @@ public final class AVPlayerAdapter: NSObject {
         return "\(Int(size.width))x\(Int(size.height))"
     }
 
+    private func bufferLength() -> Double {
+        guard let range = options.player.currentItem?.loadedTimeRanges.first?.timeRangeValue else { return 0 }
+        let end = CMTimeGetSeconds(CMTimeRangeGetEnd(range))
+        return max(0, end - currentPosition())
+    }
+
     private func makePlayerInfo() -> AnalyticsPlayerInfo {
         AnalyticsPlayerInfo(
             engine: .avplayer,
@@ -491,6 +502,8 @@ public final class AVPlayerAdapter: NSObject {
 
     private func guessCdn(from urlString: String) -> String? {
         guard let host = URL(string: urlString)?.host?.lowercased() else { return nil }
+        if host.contains("msvdn") { return "mainstreaming" }
+        if host.contains("netrw") { return "raiway" }
         if host.contains("akamai") || host.contains("akamaized") { return "akamai" }
         if host.contains("cloudfront") { return "cloudfront" }
         if host.contains("fastly")     { return "fastly" }

@@ -26,6 +26,8 @@ export interface HlsJsAdapterOptions extends WebAdapterOptions {
 export class HlsJsAdapter extends WebAdapter {
   private readonly hls: Hls;
   private hlsHandlers: Array<{ event: string; fn: (...args: any[]) => void }> = [];
+  private latencyTimer: ReturnType<typeof setInterval> | null = null;
+  private lastLatencyEventAt = 0;
 
   /** Track the current level index to detect direction of bitrate switches */
   private currentLevelIndex = -1;
@@ -42,9 +44,11 @@ export class HlsJsAdapter extends WebAdapter {
   override async attach(): Promise<void> {
     await super.attach();
     this._bindHlsEvents();
+    this._startLatencyMonitor();
   }
 
   override async detach(): Promise<void> {
+    this._stopLatencyMonitor();
     this._unbindHlsEvents();
     await super.detach();
   }
@@ -161,10 +165,12 @@ export class HlsJsAdapter extends WebAdapter {
 
     // Derive CDN name from the fragment URL
     const cdnName = this._extractCdnFromUrl(data.frag?.url) ?? this.options.cdnName ?? 'unknown';
+    const mediaType = this._getFragmentMediaType(data);
 
     this.core.session.onCdnRequest({
       cdnName,
       requestType: 'segment',
+      mediaType,
       httpStatus: data.networkDetails?.status ?? 200,
       ttfbMs,
       durationMs,
@@ -172,6 +178,13 @@ export class HlsJsAdapter extends WebAdapter {
       throughputKbps,
       sequenceNumber: data.frag?.sn
     });
+
+    const bandwidthEstimate = (this.hls as any).bandwidthEstimate;
+    if (Number.isFinite(bandwidthEstimate)) {
+      this.core.session.updatePlaybackMetrics({
+        bandwidthEstimateKbps: bandwidthEstimate / 1000
+      });
+    }
   }
 
   private _onHlsError(_event: string, data: any): void {
@@ -223,6 +236,8 @@ export class HlsJsAdapter extends WebAdapter {
     if (!url) return undefined;
     try {
       const hostname = new URL(url).hostname.toLowerCase();
+      if (hostname.includes('msvdn')) return 'mainstreaming';
+      if (hostname.includes('netrw')) return 'raiway';
       if (hostname.includes('akamai') || hostname.includes('akamaized')) return 'akamai';
       if (hostname.includes('cloudfront'))  return 'cloudfront';
       if (hostname.includes('fastly'))      return 'fastly';
@@ -232,6 +247,48 @@ export class HlsJsAdapter extends WebAdapter {
       return hostname;
     } catch {
       return undefined;
+    }
+  }
+
+  private _getFragmentMediaType(data: any): 'video' | 'audio' | 'subtitle' | 'muxed' {
+    const fragmentType = data.frag?.type ?? data.type;
+    if (fragmentType === 'audio') return 'audio';
+    if (fragmentType === 'subtitle') return 'subtitle';
+
+    const level = this.hls.levels?.[data.frag?.level] ?? this.hls.levels?.[this.hls.currentLevel];
+    const codecs = [
+      level?.audioCodec,
+      level?.attrs?.CODECS,
+      (level as any)?.codecSet
+    ].filter(Boolean).join(',');
+    const hasAudioCodec = /mp4a|ac-3|ec-3|opus|vorbis/i.test(codecs);
+    const hasSeparateAudio = this.hls.audioTracks?.some(track => Boolean(track.url));
+    return hasAudioCodec && !hasSeparateAudio ? 'muxed' : 'video';
+  }
+
+  private _startLatencyMonitor(): void {
+    if (this.latencyTimer !== null) return;
+    this.latencyTimer = setInterval(() => {
+      const latency = (this.hls as any).latency;
+      if (!Number.isFinite(latency) || latency < 0 || !this.core.getSessionState()?.hasFirstFrame) return;
+
+      this.core.session.updatePlaybackMetrics({ liveLatencyS: latency });
+      if (Date.now() - this.lastLatencyEventAt >= 30_000) {
+        const targetLatency = (this.hls as any).targetLatency;
+        this.core.session.onLiveLatency(
+          latency,
+          this.video.currentTime,
+          Number.isFinite(targetLatency) ? targetLatency : undefined
+        );
+        this.lastLatencyEventAt = Date.now();
+      }
+    }, 2_000);
+  }
+
+  private _stopLatencyMonitor(): void {
+    if (this.latencyTimer !== null) {
+      clearInterval(this.latencyTimer);
+      this.latencyTimer = null;
     }
   }
 }

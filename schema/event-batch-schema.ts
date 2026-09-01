@@ -227,7 +227,12 @@ export const PAYLOAD_SCHEMAS: Record<string, object> = {
       current_resolution:   { type: 'string' },
       is_buffering:         { type: 'boolean' },
       rebuffer_time_ms:     { type: 'number', minimum: 0 },
-      live_latency_s:       { type: 'number', minimum: 0 }
+      live_latency_s:       { type: 'number', minimum: 0 },
+      buffer_length_s:      { type: 'number', minimum: 0 },
+      bandwidth_estimate_kbps: { type: 'number', minimum: 0 },
+      decoded_video_frames: { type: 'integer', minimum: 0 },
+      dropped_video_frames: { type: 'integer', minimum: 0 },
+      playback_rate:        { type: 'number', minimum: 0 }
     },
     additionalProperties: false
   },

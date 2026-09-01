@@ -35,6 +35,7 @@ Function RokuAnalytics() As Object
     this._playRequestAt = 0
     this._bufferingStartAt = 0
     this._isBuffering = false
+    this._bufferingCountsAsRebuffer = false
     this._totalBufferingMs = 0.0
     this._bufferingCount = 0
     this._currentBitrateKbps = 0.0
@@ -107,8 +108,11 @@ Function RokuAnalytics() As Object
             If m._isBuffering
                 m._isBuffering = false
                 durationMs = m._nowMs() - m._bufferingStartAt
-                m._totalBufferingMs = m._totalBufferingMs + durationMs
-                m._bufferingCount = m._bufferingCount + 1
+                If m._bufferingCountsAsRebuffer
+                    m._totalBufferingMs = m._totalBufferingMs + durationMs
+                    m._bufferingCount = m._bufferingCount + 1
+                End If
+                m._bufferingCountsAsRebuffer = false
                 m._emitBufferingEnd(pos, durationMs)
             End If
 
@@ -116,6 +120,7 @@ Function RokuAnalytics() As Object
             If Not m._isBuffering
                 m._isBuffering = true
                 m._bufferingStartAt = m._nowMs()
+                m._bufferingCountsAsRebuffer = m._hasFirstFrame
                 cause = "initial"
                 If m._hasFirstFrame Then cause = "network"
                 m._emitBufferingStart(pos, cause)

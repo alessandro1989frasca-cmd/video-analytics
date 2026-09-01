@@ -180,9 +180,15 @@ CREATE TABLE IF NOT EXISTS analytics_heartbeats
     country_code        LowCardinality(String),
     playback_position_s Float32,
     current_bitrate_kbps Float32,
+    current_resolution  LowCardinality(String),
     is_buffering        UInt8,
     rebuffer_time_ms    Float32,
-    live_latency_s      Float32             -- 0 for VOD
+    live_latency_s      Float32,            -- 0 for VOD
+    buffer_length_s     Float32,
+    bandwidth_estimate_kbps Float32,
+    decoded_video_frames UInt64,
+    dropped_video_frames UInt64,
+    playback_rate       Float32
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(event_minute)
@@ -202,6 +208,7 @@ CREATE TABLE IF NOT EXISTS analytics_cdn_requests
     session_id          LowCardinality(String),
     cdn_name            LowCardinality(String),
     request_type        LowCardinality(String),   -- manifest | segment | key
+    media_type          LowCardinality(String),   -- video | audio | subtitle | muxed
     http_status         UInt16,
     ttfb_ms             Float32,
     duration_ms         Float32,

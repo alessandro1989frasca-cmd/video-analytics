@@ -160,6 +160,16 @@ export class WebOsAdapter {
 
     private _onTimeUpdate(): void {
         this.core.session.updatePlaybackPosition(this.video.currentTime);
+        const quality = (this.video as any).getVideoPlaybackQuality?.();
+        const bufferLength = this._bufferLength();
+        this.core.session.updatePlaybackMetrics({
+            bufferLengthS: bufferLength,
+            playbackRate: this.video.playbackRate,
+            decodedVideoFrames: Number.isFinite(quality?.totalVideoFrames)
+                ? quality.totalVideoFrames : undefined,
+            droppedVideoFrames: Number.isFinite(quality?.droppedVideoFrames)
+                ? quality.droppedVideoFrames : undefined
+        });
     }
 
     private _onEnded(): void {
@@ -222,5 +232,15 @@ export class WebOsAdapter {
 
     private _webosVersion(): string {
         try { return webOSDev?.device?.firmwareVersion ?? 'unknown'; } catch { return 'unknown'; }
+    }
+
+    private _bufferLength(): number {
+        const position = this.video.currentTime;
+        for (let i = 0; i < this.video.buffered.length; i++) {
+            if (position >= this.video.buffered.start(i) && position <= this.video.buffered.end(i)) {
+                return Math.max(0, this.video.buffered.end(i) - position);
+            }
+        }
+        return 0;
     }
 }

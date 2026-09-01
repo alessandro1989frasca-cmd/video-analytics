@@ -28,11 +28,18 @@ internal class AnalyticsSessionManager(
     private var playRequestAt: Long? = null
     private var firstFrameAt: Long? = null
     private var bufferingStartAt: Long? = null
+    private var bufferingStartCause: String? = null
     private var totalBufferingMs: Long = 0
     private var bufferingCount: Int = 0
     private var bitrateChangeCount: Int = 0
     private var pauseStartAt: Long? = null
     private var isSessionActive: Boolean = false
+    private var bufferLengthS: Double? = null
+    private var bandwidthEstimateKbps: Double? = null
+    private var decodedVideoFrames: Long? = null
+    private var droppedVideoFrames: Long? = null
+    private var playbackRate: Double? = null
+    private var liveLatencyS: Double? = null
 
     private lateinit var contentInfo: AnalyticsContentInfo
     private lateinit var playerInfo: AnalyticsPlayerInfo
@@ -68,11 +75,18 @@ internal class AnalyticsSessionManager(
         playRequestAt = null
         firstFrameAt = null
         bufferingStartAt = null
+        bufferingStartCause = null
         totalBufferingMs = 0
         bufferingCount = 0
         bitrateChangeCount = 0
         pauseStartAt = null
         isSessionActive = true
+        bufferLengthS = null
+        bandwidthEstimateKbps = null
+        decodedVideoFrames = null
+        droppedVideoFrames = null
+        playbackRate = null
+        liveLatencyS = null
         contentInfo = content
         playerInfo = player
         networkInfo = network
@@ -148,6 +162,7 @@ internal class AnalyticsSessionManager(
     fun onBufferingStart(positionS: Double, cause: String = "unknown") {
         if (!isSessionActive || bufferingStartAt != null) return
         bufferingStartAt = System.currentTimeMillis()
+        bufferingStartCause = cause
         emitEvent(AnalyticsEventType.BUFFERING_START, JSONObject().apply {
             put("playback_position_s", positionS)
             put("cause", cause)
@@ -159,9 +174,12 @@ internal class AnalyticsSessionManager(
     fun onBufferingEnd(positionS: Double) {
         val start = bufferingStartAt ?: return
         val durationMs = System.currentTimeMillis() - start
-        totalBufferingMs += durationMs
-        bufferingCount++
+        if (bufferingStartCause != "initial" && bufferingStartCause != "seek") {
+            totalBufferingMs += durationMs
+            bufferingCount++
+        }
         bufferingStartAt = null
+        bufferingStartCause = null
         emitEvent(AnalyticsEventType.BUFFERING_END, JSONObject().apply {
             put("playback_position_s", positionS)
             put("buffering_duration_ms", durationMs)
@@ -222,7 +240,8 @@ internal class AnalyticsSessionManager(
         cdnName: String, requestType: String,
         httpStatus: Int, ttfbMs: Double, durationMs: Double,
         bytes: Long, throughputKbps: Double,
-        sequenceNumber: Int? = null
+        sequenceNumber: Int? = null,
+        mediaType: String? = null
     ) {
         if (!isSessionActive) return
         emitEvent(AnalyticsEventType.CDN_REQUEST, JSONObject().apply {
@@ -234,6 +253,7 @@ internal class AnalyticsSessionManager(
             put("bytes", bytes)
             put("throughput_kbps", throughputKbps)
             sequenceNumber?.let { put("sequence_number", it) }
+            mediaType?.let { put("media_type", it) }
         })
     }
 
@@ -283,6 +303,23 @@ internal class AnalyticsSessionManager(
         playbackPositionS = positionS
         bitrateKbps?.let { currentBitrateKbps = it }
         resolution?.let { currentResolution = it }
+    }
+
+    @Synchronized
+    fun updatePlaybackMetrics(
+        bufferLengthS: Double? = null,
+        bandwidthEstimateKbps: Double? = null,
+        decodedVideoFrames: Long? = null,
+        droppedVideoFrames: Long? = null,
+        playbackRate: Double? = null,
+        liveLatencyS: Double? = null
+    ) {
+        bufferLengthS?.takeIf { it.isFinite() }?.let { this.bufferLengthS = it.coerceAtLeast(0.0) }
+        bandwidthEstimateKbps?.takeIf { it.isFinite() }?.let { this.bandwidthEstimateKbps = it.coerceAtLeast(0.0) }
+        decodedVideoFrames?.let { this.decodedVideoFrames = it.coerceAtLeast(0) }
+        droppedVideoFrames?.let { this.droppedVideoFrames = it.coerceAtLeast(0) }
+        playbackRate?.takeIf { it.isFinite() }?.let { this.playbackRate = it.coerceAtLeast(0.0) }
+        liveLatencyS?.takeIf { it.isFinite() }?.let { this.liveLatencyS = it.coerceAtLeast(0.0) }
     }
 
     @Synchronized
@@ -345,6 +382,12 @@ internal class AnalyticsSessionManager(
             put("current_resolution", currentResolution)
             put("is_buffering", bufferingStartAt != null)
             put("rebuffer_time_ms", totalBufferingMs)
+            bufferLengthS?.let { put("buffer_length_s", it) }
+            bandwidthEstimateKbps?.let { put("bandwidth_estimate_kbps", it) }
+            decodedVideoFrames?.let { put("decoded_video_frames", it) }
+            droppedVideoFrames?.let { put("dropped_video_frames", it) }
+            playbackRate?.let { put("playback_rate", it) }
+            liveLatencyS?.let { put("live_latency_s", it) }
         })
     }
 

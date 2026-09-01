@@ -134,10 +134,16 @@ export class DashJsAdapter extends WebAdapter {
     const ttfbMs = (req.firstByteDate?.getTime() ?? 0) - (req.requestStartDate?.getTime() ?? 0);
     const throughputKbps = durationMs > 0 ? Math.round((bytes * 8) / durationMs) : 0;
     const cdnName = this._extractCdnFromUrl(req.url) ?? this.options.cdnName ?? 'unknown';
+    const requestType = req.type === 'InitializationSegment' ? 'manifest' : 'segment';
+    const mediaType = data.mediaType === 'audio' ? 'audio'
+      : data.mediaType === 'text' ? 'subtitle'
+      : data.mediaType === 'video' ? 'video'
+      : undefined;
 
     this.core.session.onCdnRequest({
       cdnName,
-      requestType: req.type === 'InitializationSegment' ? 'manifest' : 'segment',
+      requestType,
+      mediaType,
       httpStatus: req.response?.status ?? 200,
       ttfbMs,
       durationMs,
@@ -191,6 +197,8 @@ export class DashJsAdapter extends WebAdapter {
     if (!url) return undefined;
     try {
       const hostname = new URL(url).hostname.toLowerCase();
+      if (hostname.includes('msvdn')) return 'mainstreaming';
+      if (hostname.includes('netrw')) return 'raiway';
       if (hostname.includes('akamai') || hostname.includes('akamaized')) return 'akamai';
       if (hostname.includes('cloudfront'))  return 'cloudfront';
       if (hostname.includes('fastly'))      return 'fastly';

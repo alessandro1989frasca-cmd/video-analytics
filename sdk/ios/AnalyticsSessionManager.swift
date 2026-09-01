@@ -19,11 +19,18 @@ public final class AnalyticsSessionManager {
     private var playRequestAt: Date? = nil
     private var firstFrameAt: Date? = nil
     private var bufferingStartAt: Date? = nil
+    private var bufferingStartCause: String? = nil
     private var totalBufferingMs: Double = 0
     private var bufferingCount: Int = 0
     private var bitrateChangeCount: Int = 0
     private var pauseStartAt: Date? = nil
     private var isSessionActive: Bool = false
+    private var bufferLengthS: Double? = nil
+    private var bandwidthEstimateKbps: Double? = nil
+    private var decodedVideoFrames: Int? = nil
+    private var droppedVideoFrames: Int? = nil
+    private var playbackRate: Double? = nil
+    private var liveLatencyS: Double? = nil
 
     // Zombie watchdog
     private var zombieTimer: Timer? = nil
@@ -66,11 +73,18 @@ public final class AnalyticsSessionManager {
         playRequestAt = nil
         firstFrameAt = nil
         bufferingStartAt = nil
+        bufferingStartCause = nil
         totalBufferingMs = 0
         bufferingCount = 0
         bitrateChangeCount = 0
         pauseStartAt = nil
         isSessionActive = true
+        bufferLengthS = nil
+        bandwidthEstimateKbps = nil
+        decodedVideoFrames = nil
+        droppedVideoFrames = nil
+        playbackRate = nil
+        liveLatencyS = nil
 
         self.contentInfo = content
         self.playerInfo = player
@@ -136,10 +150,12 @@ public final class AnalyticsSessionManager {
 
     public func onBufferingStart(positionS: Double, cause: String = "unknown") {
         guard isSessionActive, bufferingStartAt == nil else { return }
+        let effectiveCause = !hasFirstFrame && cause == "network" ? "initial" : cause
         bufferingStartAt = Date()
+        bufferingStartCause = effectiveCause
         emitEvent(type: .BUFFERING_START, payload: [
             "playback_position_s": positionS,
-            "cause": cause
+            "cause": effectiveCause
         ])
         resetZombieTimer()
     }
@@ -147,9 +163,12 @@ public final class AnalyticsSessionManager {
     public func onBufferingEnd(positionS: Double) {
         guard isSessionActive, let start = bufferingStartAt else { return }
         let durationMs = Date().timeIntervalSince(start) * 1000
-        totalBufferingMs += durationMs
-        bufferingCount += 1
+        if bufferingStartCause != "initial" && bufferingStartCause != "seek" {
+            totalBufferingMs += durationMs
+            bufferingCount += 1
+        }
         bufferingStartAt = nil
+        bufferingStartCause = nil
         emitEvent(type: .BUFFERING_END, payload: [
             "playback_position_s": positionS,
             "buffering_duration_ms": Int(durationMs)
@@ -209,7 +228,8 @@ public final class AnalyticsSessionManager {
         cdnName: String, requestType: String,
         httpStatus: Int, ttfbMs: Double, durationMs: Double,
         bytes: Int, throughputKbps: Double,
-        sequenceNumber: Int? = nil
+        sequenceNumber: Int? = nil,
+        mediaType: String? = nil
     ) {
         guard isSessionActive else { return }
         var payload: [String: Any] = [
@@ -222,6 +242,7 @@ public final class AnalyticsSessionManager {
             "throughput_kbps": throughputKbps
         ]
         if let seq = sequenceNumber { payload["sequence_number"] = seq }
+        if let media = mediaType { payload["media_type"] = media }
         emitEvent(type: .CDN_REQUEST, payload: payload)
     }
 
@@ -263,6 +284,22 @@ public final class AnalyticsSessionManager {
         playbackPositionS = positionS
         if let b = bitrateKbps  { currentBitrateKbps = b }
         if let r = resolution    { currentResolution = r }
+    }
+
+    public func updatePlaybackMetrics(
+        bufferLengthS: Double? = nil,
+        bandwidthEstimateKbps: Double? = nil,
+        decodedVideoFrames: Int? = nil,
+        droppedVideoFrames: Int? = nil,
+        playbackRate: Double? = nil,
+        liveLatencyS: Double? = nil
+    ) {
+        if let value = bufferLengthS, value.isFinite { self.bufferLengthS = max(0, value) }
+        if let value = bandwidthEstimateKbps, value.isFinite { self.bandwidthEstimateKbps = max(0, value) }
+        if let value = decodedVideoFrames { self.decodedVideoFrames = max(0, value) }
+        if let value = droppedVideoFrames { self.droppedVideoFrames = max(0, value) }
+        if let value = playbackRate, value.isFinite { self.playbackRate = max(0, value) }
+        if let value = liveLatencyS, value.isFinite { self.liveLatencyS = max(0, value) }
     }
 
     public func endSession(reason: AnalyticsSessionEndReason) {
@@ -320,13 +357,20 @@ public final class AnalyticsSessionManager {
 
     private func emitHeartbeat() {
         guard isSessionActive else { return }
-        emitEvent(type: .HEARTBEAT, payload: [
+        var payload: [String: Any] = [
             "playback_position_s": playbackPositionS,
             "current_bitrate_kbps": currentBitrateKbps,
             "current_resolution": currentResolution,
             "is_buffering": bufferingStartAt != nil,
             "rebuffer_time_ms": totalBufferingMs
-        ])
+        ]
+        if let value = bufferLengthS { payload["buffer_length_s"] = value }
+        if let value = bandwidthEstimateKbps { payload["bandwidth_estimate_kbps"] = value }
+        if let value = decodedVideoFrames { payload["decoded_video_frames"] = value }
+        if let value = droppedVideoFrames { payload["dropped_video_frames"] = value }
+        if let value = playbackRate { payload["playback_rate"] = value }
+        if let value = liveLatencyS { payload["live_latency_s"] = value }
+        emitEvent(type: .HEARTBEAT, payload: payload)
     }
 
     // MARK: - Zombie watchdog

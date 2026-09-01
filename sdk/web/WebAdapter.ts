@@ -192,6 +192,7 @@ export class WebAdapter {
     const pos = this.video.currentTime;
     this.lastPosition = pos;
     this.core.session.updatePlaybackPosition(pos);
+    this.core.session.updatePlaybackMetrics(this._getPlaybackMetrics());
   }
 
   protected _onEnded(): void {
@@ -264,6 +265,49 @@ export class WebAdapter {
       engine_version: 'html5',
       sdk_version: this.options.sdkConfig.sdkVersion
     };
+  }
+
+  /** Collect optional metrics that are safe across modern browsers and WebViews. */
+  protected _getPlaybackMetrics() {
+    const metrics: {
+      bufferLengthS: number;
+      playbackRate: number;
+      bandwidthEstimateKbps?: number;
+      decodedVideoFrames?: number;
+      droppedVideoFrames?: number;
+    } = {
+      bufferLengthS: this._getBufferLength(),
+      playbackRate: this.video.playbackRate
+    };
+
+    const connection = (navigator as any).connection;
+    if (Number.isFinite(connection?.downlink)) {
+      metrics.bandwidthEstimateKbps = connection.downlink * 1000;
+    }
+
+    const getQuality = (this.video as any).getVideoPlaybackQuality;
+    if (typeof getQuality === 'function') {
+      const quality = getQuality.call(this.video);
+      if (Number.isFinite(quality?.totalVideoFrames)) {
+        metrics.decodedVideoFrames = quality.totalVideoFrames;
+      }
+      if (Number.isFinite(quality?.droppedVideoFrames)) {
+        metrics.droppedVideoFrames = quality.droppedVideoFrames;
+      }
+    }
+
+    return metrics;
+  }
+
+  private _getBufferLength(): number {
+    const position = this.video.currentTime;
+    const ranges = this.video.buffered;
+    for (let i = 0; i < ranges.length; i++) {
+      if (position >= ranges.start(i) && position <= ranges.end(i)) {
+        return Math.max(0, ranges.end(i) - position);
+      }
+    }
+    return 0;
   }
 
   /** Best-effort CDN detection from the video src hostname. */
