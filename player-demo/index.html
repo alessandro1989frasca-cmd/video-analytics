@@ -108,6 +108,15 @@
       border-radius:50%; animation:blink 1.2s infinite;
       display:inline-block;
     }
+    .dvr-control {
+      display:flex; align-items:center; gap:7px; min-width:180px; flex:1;
+      color:#777; font-size:10px;
+    }
+    .dvr-control[hidden] { display:none; }
+    #dvr-seek {
+      flex:1; min-width:100px; accent-color:#c8102e; cursor:pointer;
+    }
+    #dvr-time { min-width:42px; color:#aaa; font-variant-numeric:tabular-nums; }
 
     .quality-bar {
       background:#0d0d0d; padding:8px 14px;
@@ -152,6 +161,7 @@
     .et-CDN_REQUEST     { background:#1a2a1a; color:#4db6ac; }
     .et-ERROR           { background:#3e1a1a; color:#ef5350; }
     .et-JOIN_TIME       { background:#1b4332; color:#a5d6a7; }
+    .et-SEEK            { background:#3d2d12; color:#ffcc80; }
     .et-SESSION_DIVIDER { background:#111; border-top:1px solid #333 !important; }
 
     .status-bar {
@@ -208,7 +218,7 @@
       <div id="video-overlay" style="position:absolute;inset:0;cursor:pointer;" onclick="togglePlayPause()"></div>
     </div>
 
-    <!-- Barra controlli custom — NO seek bar (live stream) -->
+    <!-- Barra controlli custom con supporto DVR quando presente nella playlist -->
     <div class="controls-bar">
       <button class="ctrl-btn" id="btn-playpause" onclick="togglePlayPause()" title="Play/Pause">⏸</button>
 
@@ -216,6 +226,14 @@
       <button class="ctrl-btn" id="btn-mute" onclick="toggleMute()" title="Mute/Unmute">🔊</button>
       <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1"
              oninput="setVolume(this.value)" style="width:80px;cursor:pointer;accent-color:#c8102e;">
+
+      <div class="dvr-control" id="dvr-control" hidden>
+        <span>DVR</span>
+        <input type="range" id="dvr-seek" min="0" max="0" step="0.1" value="0"
+               oninput="previewDvrPosition(this.value)" onchange="seekToDvr(this.value)"
+               aria-label="Posizione DVR">
+        <span id="dvr-time">LIVE</span>
+      </div>
 
       <!-- Indicatore LIVE — click riporta al live edge -->
       <div style="flex:1;display:flex;align-items:center;gap:8px;justify-content:center;">
@@ -278,6 +296,17 @@ const CONFIG = {
 
 function formatMbps(kbps) {
   return kbps > 0 ? `${(kbps / 1000).toFixed(2)} Mbps` : '—';
+}
+
+function formatDvrPosition(seconds) {
+  if (!Number.isFinite(seconds)) return '—';
+  const total = Math.max(0, Math.round(seconds));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+    : `${minutes}:${String(secs).padStart(2, '0')}`;
 }
 
 // Catalogo canali
@@ -562,6 +591,11 @@ const Analytics = (() => {
       emit('RESUME', { playback_position_s: posS, pause_duration_ms: 0 });
     },
 
+    onSeek(fromS, toS) {
+      if (!Number.isFinite(fromS) || !Number.isFinite(toS) || Math.abs(toS - fromS) < 0.1) return;
+      emit('SEEK', { from_position_s: fromS, to_position_s: toS });
+    },
+
     onLiveLatency(latencyS, posS) {
       emit('LIVE_LATENCY', { latency_s: latencyS, playback_position_s: posS });
     },
@@ -612,6 +646,8 @@ function logEvent(event) {
     detail = `${p.cdn_name} | ${formatMbps(p.throughput_kbps)} | ${Math.round(p.duration_ms)}ms`;
   else if (event.event_type === 'JOIN_TIME')
     detail = `${p.join_time_ms}ms`;
+  else if (event.event_type === 'SEEK')
+    detail = `${formatDvrPosition(p.from_position_s)} → ${formatDvrPosition(p.to_position_s)}`;
   else if (event.event_type === 'ERROR')
     detail = `${p.error_code} (${p.source})`;
   else
@@ -659,6 +695,8 @@ async function resolveHlsUrl(channelKey) {
 async function startPlayer(channelKey) {
   const channel = CHANNELS[channelKey];
   const video   = document.getElementById('video');
+  video.addEventListener('timeupdate', updateDvrControl);
+  video.addEventListener('loadedmetadata', updateDvrControl);
 
   // Aggiorna UI header
   document.getElementById('header-logo').textContent = channel.title;
@@ -861,14 +899,82 @@ function seekToLive() {
   const v = document.getElementById('video');
   // hls.js: liveSyncPosition è il punto "live edge" corretto
   const liveEdge = hlsInstance.liveSyncPosition;
-  if (liveEdge && isFinite(liveEdge)) {
+  if (Number.isFinite(liveEdge)) {
+    const fromPosition = v.currentTime;
     v.currentTime = liveEdge;
+    Analytics.onSeek(fromPosition, liveEdge);
+    updateDvrControl();
   }
+}
+
+function getDvrWindow() {
+  const video = document.getElementById('video');
+  if (!video.seekable || video.seekable.length === 0) return null;
+
+  const start = video.seekable.start(0);
+  const end = video.seekable.end(video.seekable.length - 1);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+  return { start, end };
+}
+
+function updateDvrControl() {
+  const control = document.getElementById('dvr-control');
+  const slider = document.getElementById('dvr-seek');
+  if (!control || !slider) return;
+
+  const window = getDvrWindow();
+  if (!window || window.end - window.start < 1) {
+    control.hidden = true;
+    slider.disabled = true;
+    return;
+  }
+
+  control.hidden = false;
+  slider.disabled = false;
+  slider.min = window.start;
+  slider.max = window.end;
+
+  const video = document.getElementById('video');
+  const current = Math.min(window.end, Math.max(window.start, video.currentTime));
+  if (document.activeElement !== slider && Number.isFinite(current)) {
+    slider.value = current;
+  }
+  const behindLive = window.end - current;
+  document.getElementById('dvr-time').textContent =
+    behindLive <= 1 ? 'LIVE' : `-${formatDvrPosition(behindLive)}`;
+}
+
+function previewDvrPosition(value) {
+  const window = getDvrWindow();
+  const target = Number(value);
+  if (!window || !Number.isFinite(target)) return;
+  const behindLive = window.end - Math.min(window.end, Math.max(window.start, target));
+  document.getElementById('dvr-time').textContent =
+    behindLive <= 1 ? 'LIVE' : `-${formatDvrPosition(behindLive)}`;
+}
+
+function seekToDvr(value) {
+  const video = document.getElementById('video');
+  const window = getDvrWindow();
+  const target = Number(value);
+  if (!window || !Number.isFinite(target)) return;
+
+  const fromPosition = video.currentTime;
+  const toPosition = Math.min(window.end, Math.max(window.start, target));
+  if (!Number.isFinite(fromPosition) || Math.abs(toPosition - fromPosition) < 0.1) {
+    updateDvrControl();
+    return;
+  }
+
+  video.currentTime = toPosition;
+  Analytics.onSeek(fromPosition, toPosition);
+  updateDvrControl();
 }
 
 // Monitora la latenza live (differenza tra live edge e posizione corrente)
 function startLatencyMonitor() {
   setInterval(() => {
+    updateDvrControl();
     if (!hlsInstance) return;
     const v = document.getElementById('video');
     const edge = hlsInstance.liveSyncPosition;
