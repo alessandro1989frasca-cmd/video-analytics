@@ -12,11 +12,13 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 
-const PORT = 8080;
+const PORT = Number(process.env.PORT || 8080);
+const COLLECTOR_PORT = Number(process.env.COLLECTOR_PORT || 3000);
 
 const RELINKERS = {
   rai1: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=2606803&output=62',
-  rai2: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=308718&output=62'
+  rai2: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=308718&output=62',
+  rainews: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=1&output=62'
 };
 
 const server = http.createServer((req, res) => {
@@ -27,6 +29,29 @@ const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+  // ── Route: /v1/collect → local collector API ──
+  if (parsedUrl.pathname === '/v1/collect' && req.method === 'POST') {
+    const proxyReq = http.request({
+      hostname: '127.0.0.1',
+      port: COLLECTOR_PORT,
+      path: '/v1/collect',
+      method: 'POST',
+      headers: req.headers
+    }, (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
+      proxyRes.pipe(res);
+    });
+
+    proxyReq.on('error', (error) => {
+      console.error('[collector] Proxy error:', error.message);
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Collector API unavailable' }));
+    });
+
+    req.pipe(proxyReq);
+    return;
+  }
 
   // ── Route: /api/relinker?ch=rai1|rai2 ──
   if (parsedUrl.pathname === '/api/relinker') {
@@ -77,6 +102,12 @@ const server = http.createServer((req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(content);
     });
+    return;
+  }
+
+  if (parsedUrl.pathname === '/favicon.ico') {
+    res.writeHead(204);
+    res.end();
     return;
   }
 

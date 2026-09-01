@@ -185,6 +185,9 @@
   <button class="ch-btn" data-channel="rai2" onclick="switchChannel('rai2', this)">
     <span class="ch-dot"></span> RAI 2
   </button>
+  <button class="ch-btn" data-channel="rainews" onclick="switchChannel('rainews', this)">
+    <span class="ch-dot"></span> RAI News
+  </button>
 
   <!-- Viewer ID — persistente su localStorage -->
   <div class="viewer-badge">
@@ -265,7 +268,7 @@
 // CONFIG
 // =============================================================================
 const CONFIG = {
-  collectorUrl:      'http://localhost:3000/v1/collect',
+  collectorUrl:      '/v1/collect',
   sdkVersion:        '1.0.0',
   heartbeatIntervalMs: 15000,
   batchSize:         5,
@@ -284,6 +287,11 @@ const CHANNELS = {
     id: 'rai2-live',
     title: 'RAI 2',
     relinker: '/api/relinker?ch=rai2'
+  },
+  rainews: {
+    id: 'rai-news-live',
+    title: 'RAI News',
+    relinker: '/api/relinker?ch=rainews'
   }
 };
 
@@ -349,7 +357,6 @@ const Analytics = (() => {
     seq++;
     const event = {
       session_id:  sessionId,
-      viewer_id:   viewerId,        // ← portato in ogni evento
       event_type:  eventType,
       timestamp:   nowMs(),
       platform:    'web',
@@ -410,12 +417,13 @@ const Analytics = (() => {
     updateUI();
     if (CONFIG.dryRun) { console.log('[Analytics] DRY RUN', batch); return; }
     try {
-      await fetch(CONFIG.collectorUrl, {
+      const response = await fetch(CONFIG.collectorUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(batch),
         keepalive: true
       });
+      if (!response.ok) throw new Error(`Collector returned ${response.status}`);
       document.getElementById('collector-status').textContent = 'connesso ✓';
       document.getElementById('collector-status').className = 'ok';
     } catch {
@@ -461,12 +469,7 @@ const Analytics = (() => {
       liveJoinStart     = nowMs();
       sessionCount++;
 
-      emit('SESSION_START', {
-        autoplay:     true,
-        // viewer_id è già nell'envelope di ogni evento
-        // qui lo mettiamo anche nel payload per renderlo esplicito
-        viewer_id:    viewerId
-      });
+      emit('SESSION_START', { autoplay: true });
 
       // Aggiorna UI
       document.getElementById('session-id-short').textContent = sessionId.slice(0,8) + '…';
@@ -590,7 +593,7 @@ function logEvent(event) {
   const p = event.payload;
   let detail = '';
   if (event.event_type === 'SESSION_START')
-    detail = `session: ${event.session_id.slice(0,8)}… | viewer: ${event.viewer_id?.slice(0,10)}…`;
+    detail = `session: ${event.session_id.slice(0,8)}…`;
   else if (event.event_type === 'SESSION_END')
     detail = `watch: ${p.watch_time_s?.toFixed(0)}s | rebuf: ${p.rebuffer_count} | motivo: ${p.reason}`;
   else if (event.event_type === 'FIRST_FRAME')

@@ -15,7 +15,7 @@ import type { ClickHouseClient } from '@clickhouse/client';
 import { config } from '../config';
 import type { AnalyticsEvent } from '../../../schema/events';
 
-export interface EnrichedEvent extends AnalyticsEvent {
+export type EnrichedEvent = AnalyticsEvent & {
   // Server-side enriched fields — added after geo lookup
   received_at:    number;   // epoch ms when collector received the batch
   client_ip_hash: string;   // SHA-256 of client IP — never store raw IP
@@ -28,7 +28,7 @@ export interface EnrichedEvent extends AnalyticsEvent {
   isp:            string | null;
   asn:            number | null;
   collector_version: string;
-}
+};
 
 // Singleton ClickHouse client
 let ch: ClickHouseClient | null = null;
