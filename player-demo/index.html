@@ -309,6 +309,10 @@ function formatDvrPosition(seconds) {
     : `${minutes}:${String(secs).padStart(2, '0')}`;
 }
 
+function formatMediaType(mediaType) {
+  return mediaType === 'muxed' ? 'video+audio' : (mediaType ?? 'video');
+}
+
 // Catalogo canali
 const CHANNELS = {
   rai1: {
@@ -657,7 +661,7 @@ function logEvent(event) {
   else if (event.event_type === 'BUFFERING_END')
     detail = `durata: ${p.buffering_duration_ms}ms`;
   else if (event.event_type === 'CDN_REQUEST')
-    detail = `${p.cdn_name} · ${p.media_type ?? 'video'} | ${formatMbps(p.throughput_kbps)} | ${Math.round(p.duration_ms)}ms`;
+    detail = `${p.cdn_name} · ${formatMediaType(p.media_type)} | ${formatMbps(p.throughput_kbps)} | ${Math.round(p.duration_ms)}ms`;
   else if (event.event_type === 'JOIN_TIME')
     detail = `${p.join_time_ms}ms`;
   else if (event.event_type === 'SEEK')
@@ -794,6 +798,17 @@ async function startPlayer(channelKey) {
     const fragmentType = data.frag?.type ?? data.type;
     if (fragmentType === 'audio') mediaType = 'audio';
     else if (fragmentType === 'subtitle') mediaType = 'subtitle';
+    else if (fragmentType === 'main') {
+      const level = hls.levels?.[data.frag?.level] ?? hls.levels?.[hls.currentLevel];
+      const codecs = [
+        level?.audioCodec,
+        level?.attrs?.CODECS,
+        level?.codecSet
+      ].filter(Boolean).join(',');
+      const hasAudioCodec = /mp4a|ac-3|ec-3|opus|vorbis/i.test(codecs);
+      const hasSeparateAudio = hls.audioTracks?.some(track => track.url);
+      if (hasAudioCodec && !hasSeparateAudio) mediaType = 'muxed';
+    }
     try {
       const h = new URL(data.frag.url).hostname.toLowerCase();
       cdn = h.includes('msvdn') ? 'mainstreaming'

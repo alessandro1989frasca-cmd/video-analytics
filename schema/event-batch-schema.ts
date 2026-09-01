@@ -286,7 +286,7 @@ export const PAYLOAD_SCHEMAS: Record<string, object> = {
     properties: {
       cdn_name:        { type: 'string' },
       request_type:    { type: 'string', enum: ['manifest', 'segment', 'key'] },
-      media_type:      { type: 'string', enum: ['video', 'audio', 'subtitle'] },
+      media_type:      { type: 'string', enum: ['video', 'audio', 'subtitle', 'muxed'] },
       url:             { type: 'string', maxLength: 2048 },
       http_status:     { type: 'integer' },
       ttfb_ms:         { type: 'number', minimum: 0 },
