@@ -1006,24 +1006,32 @@ function seekToDvr(value) {
   updateDvrControl();
 }
 
-// Monitora la latenza live (differenza tra live edge e posizione corrente)
+let latencyMonitorTimer = null;
+let lastLatencyEventAt = 0;
+
+// Monitora la latenza live reale esposta da hls.js
 function startLatencyMonitor() {
-  setInterval(() => {
+  if (latencyMonitorTimer !== null) return;
+
+  latencyMonitorTimer = setInterval(() => {
     updateDvrControl();
     if (!hlsInstance) return;
     const v = document.getElementById('video');
-    const edge = hlsInstance.liveSyncPosition;
-    if (!edge || !isFinite(edge)) return;
-    const latency = edge - v.currentTime;
+    const hlsLatency = hlsInstance.latency;
+    const levelEdge = hlsInstance.latestLevelDetails?.edge;
+    const latency = Number.isFinite(hlsLatency)
+      ? hlsLatency
+      : Number.isFinite(levelEdge) ? levelEdge - v.currentTime : NaN;
     const display = document.getElementById('latency-display');
     const indicator = document.getElementById('live-indicator');
-    if (latency >= 0 && latency < 60) {
+    if (Number.isFinite(latency) && latency >= 0 && latency < 60) {
       display.textContent = `latenza: ${latency.toFixed(1)}s`;
       // "at live" = meno di 3s di ritardo
       indicator.classList.toggle('at-live', latency < 3);
       // Emetti evento LIVE_LATENCY ogni 30s
-      if (Math.round(Date.now() / 1000) % 30 === 0) {
+      if (Date.now() - lastLatencyEventAt >= 30_000) {
         Analytics.onLiveLatency(latency, v.currentTime);
+        lastLatencyEventAt = Date.now();
       }
     }
   }, 2000);
