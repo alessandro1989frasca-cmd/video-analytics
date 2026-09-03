@@ -1,0 +1,84 @@
+Request URL
+https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=2606803&output=62
+Request Method
+GET
+Status Code
+200 OK
+Remote Address
+23.60.190.52:443
+Referrer Policy
+origin
+access-control-allow-credentials
+true
+access-control-allow-headers
+origin, x-requested-with, content-type, x-ua-token, x-fid
+access-control-allow-methods
+GET, OPTIONS, HEAD
+access-control-allow-origin
+https://www.raiplay.it
+cache-control
+max-age=0, no-cache, no-store
+content-language
+it-IT
+content-length
+782
+content-type
+application/json;charset=ISO-8859-1
+date
+Thu, 03 Sep 2026 09:56:29 GMT
+expires
+Thu, 03 Sep 2026 09:56:29 GMT
+pragma
+no-cache
+server
+Apache
+set-cookie
+JSESSIONID=AfungOviw4cK4RL1QC0ZUZgP; Path=/relinker
+set-cookie
+ak_bmsc=5B81579F0C682A8512E09B565E0E100F~000000000000000000000000000000~YAAQ9rUQAhbG5zegAQAA58+yZgHUMAY7okKvg3qTuzVx9vffyZZ7j5uHl8qzSWBP5qrelQBMxiVtGQDCmrQTKp9w6SDwgOAY4/07ZlVVqltYFKeoaxcFBq70AgeBWAH8JMa4ASVydeikbvQzEES9IIz0Pikoa54jx4fYQUggYR1SM7556oaTSJtVgooBhRP4Mjj5oK7VcpIUEfC6F3Ete7i+4DGVOXMa2/8/2OWx7Ey/4PnB00R4r5QfNQDAJQ2T26qNrJuxtEvyVhu9Fwywrhk5xf//i5IyUMc+o36472EBKxFpQ4zPoCKHststdQ+hUrC9dwiLJ7RCxvXw0YU8w/zaEv2Bi7YKw1aNX0cFRl0fG7w8U2wny1Ht73UeAx2YTcq3WMGfFjwAk/jwTlymkfCs; Domain=.mediapolis.rai.it; Path=/; Expires=Thu, 03 Sep 2026 11:56:29 GMT; Max-Age=7200; HttpOnly
+vary
+X-Forwarded-Proto
+x-powered-by
+JSP/2.2
+:authority
+mediapolis.rai.it
+:method
+GET
+:path
+/relinker/relinkerServlet.htm?cont=2606803&output=62
+:scheme
+https
+accept
+*/*
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7
+cache-control
+no-cache
+origin
+https://www.raiplay.it
+pragma
+no-cache
+priority
+u=1, i
+referer
+https://www.raiplay.it/
+sec-ch-ua
+"Chromium";v="152", "Not?A_Brand";v="24", "Google Chrome";v="152"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+cross-site
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36
+x-fid
+f110d9111ac14810f61df6a23c95a3d1021ebb2119ab4eac5343bb5725bea3da
+x-ua-token
+Da3kIeaJBS83NBsKSpwqLOt2RfGG3up0gvjaEXgbSCM
