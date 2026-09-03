@@ -53,3 +53,8 @@ externalPort = 3000
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+CLICKHOUSE_HOST = "https://i9vf91kzz1.germanywestcentral.azure.clickhouse.cloud:8443"
