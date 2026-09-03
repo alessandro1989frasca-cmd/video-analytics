@@ -130,6 +130,8 @@
       padding:3px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:600;
     }
     .q-btn.active-q { background:#c8102e; color:#fff; border-color:#c8102e; }
+    .stop-btn { color:#ff8a65; }
+    .stop-btn.stopped { opacity:.55; }
 
     /* log */
     .log-col { width:370px; background:#111; border-left:1px solid #222; display:flex; flex-direction:column; }
@@ -221,6 +223,7 @@
     <!-- Barra controlli custom con supporto DVR quando presente nella playlist -->
     <div class="controls-bar">
       <button class="ctrl-btn" id="btn-playpause" onclick="togglePlayPause()" title="Play/Pause">⏸</button>
+      <button class="ctrl-btn stop-btn" id="btn-stop" onclick="stopPlayer()" title="Ferma playback">■</button>
 
       <!-- Volume -->
       <button class="ctrl-btn" id="btn-mute" onclick="toggleMute()" title="Mute/Unmute">🔊</button>
@@ -653,6 +656,26 @@ const Analytics = (() => {
       emit('LIVE_LATENCY', { latency_s: latencyS, playback_position_s: posS });
     },
 
+    endSession(reason = 'user_stop') {
+      if (!sessionId) return;
+      emit('SESSION_END', {
+        watch_time_s:          firstFrameAt ? (nowMs() - firstFrameAt) / 1000 : 0,
+        completion_pct:        null,
+        reason,
+        rebuffer_count:        bufferingCount,
+        rebuffer_time_s:       totalBufferingMs / 1000,
+        bitrate_change_count:  bitrateChangeCount,
+        startup_time_ms:       startupTimeMs,
+        avg_throughput_kbps:   cdnRequestCount > 0 ? totalCdnThroughputKbps / cdnRequestCount : 0,
+        avg_ttfb_ms:           cdnRequestCount > 0 ? totalCdnTtfbMs / cdnRequestCount : 0
+      });
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+      flush('user_stop');
+      sessionId = null;
+      currentChannel = null;
+    },
+
     flushNow() { flush('unload'); }
   };
 })();
@@ -755,6 +778,7 @@ async function startPlayer(channelKey) {
   // Aggiorna UI header
   document.getElementById('header-logo').textContent = channel.title;
   document.getElementById('channel-overlay').textContent = channel.title;
+  document.getElementById('btn-stop').classList.remove('stopped');
 
   // Risolvi URL HLS fresco (token valido)
   const hlsUrl = await resolveHlsUrl(channelKey);
@@ -937,6 +961,22 @@ function togglePlayPause() {
     btn.textContent = '▶';
     Analytics.onPause(v.currentTime);
   }
+}
+
+function stopPlayer() {
+  const video = document.getElementById('video');
+  const stopButton = document.getElementById('btn-stop');
+  video.pause();
+  if (hlsInstance) {
+    hlsInstance.destroy();
+    hlsInstance = null;
+  }
+  video.removeAttribute('src');
+  video.load();
+  Analytics.endSession('user_stop');
+  document.getElementById('btn-playpause').textContent = '▶';
+  document.getElementById('channel-overlay').textContent = 'Playback fermato';
+  stopButton.classList.add('stopped');
 }
 
 function toggleMute() {

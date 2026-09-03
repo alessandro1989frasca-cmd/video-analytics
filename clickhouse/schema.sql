@@ -71,8 +71,9 @@ CREATE TABLE IF NOT EXISTS analytics_events
     isp                 String,
     asn                 UInt32,
 
-    -- Identity (hashed — GDPR compliant)
+    -- Identity
     client_ip_hash      String,
+    client_ip           String,              -- raw IP; retained by the 90-day table TTL
 
     -- Event-specific payload (full JSON for flexible querying)
     payload             String,             -- JSON

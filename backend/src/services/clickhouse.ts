@@ -18,7 +18,8 @@ import type { AnalyticsEvent } from '../../../schema/events';
 export type EnrichedEvent = AnalyticsEvent & {
   // Server-side enriched fields — added after geo lookup
   received_at:    number;   // epoch ms when collector received the batch
-  client_ip_hash: string;   // SHA-256 of client IP — never store raw IP
+  client_ip_hash: string;   // SHA-256 of client IP
+  client_ip:      string;   // Raw IP — retained for the demo's 90-day window
   country_code:   string | null;
   country_name:   string | null;
   region:         string | null;
@@ -149,8 +150,9 @@ function flattenEvent(e: EnrichedEvent): Record<string, unknown> {
     isp:           e.isp ?? '',
     asn:           e.asn ?? 0,
 
-    // Client identity (hashed — no raw IP)
+    // Client identity
     client_ip_hash: e.client_ip_hash,
+    client_ip:      e.client_ip,
 
     // Payload — stored as JSON string for flexible querying
     payload: JSON.stringify(e.payload),

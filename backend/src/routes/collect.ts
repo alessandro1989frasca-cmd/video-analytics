@@ -83,7 +83,8 @@ const collectRoute: FastifyPluginAsync = async (fastify) => {
         request.headers as Record<string, string | string[] | undefined>
       );
 
-      // Hash the IP before storing — never persist raw IPs (GDPR)
+      // Keep both the raw IP (demo retention: 90 days) and its hash for
+      // correlation without exposing the address in normal dashboards.
       const clientIpHash = createHash('sha256').update(clientIp).digest('hex');
 
       const geo = await lookupGeo(clientIp);
@@ -104,6 +105,7 @@ const collectRoute: FastifyPluginAsync = async (fastify) => {
         ...event,
         received_at:       receivedAt,
         client_ip_hash:    clientIpHash,
+        client_ip:         clientIp,
         country_code:      geo.country_code,
         country_name:      geo.country_name,
         region:            geo.region,
