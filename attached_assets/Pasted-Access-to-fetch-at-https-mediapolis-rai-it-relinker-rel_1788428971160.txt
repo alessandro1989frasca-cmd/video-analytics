@@ -1,0 +1,35 @@
+Access to fetch at 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=2606803&output=62' from origin 'https://a0939bdf844441c29e23bc1e37286471.msvdn.net' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+mediapolis.rai.it/relinker/relinkerServlet.htm?cont=2606803&output=62:1  Failed to load resource: net::ERR_FAILED
+index.html:782 [relinker] TypeError: Failed to fetch
+    at resolveHlsUrl (index.html:772:24)
+    at startPlayer (index.html:804:24)
+    at switchChannel (index.html:967:3)
+    at HTMLButtonElement.onclick (index.html:200:84)
+resolveHlsUrl @ index.html:782
+index.html:1 Access to fetch at 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=308718&output=62' from origin 'https://a0939bdf844441c29e23bc1e37286471.msvdn.net' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+mediapolis.rai.it/relinker/relinkerServlet.htm?cont=308718&output=62:1  Failed to load resource: net::ERR_FAILED
+index.html:782 [relinker] TypeError: Failed to fetch
+    at resolveHlsUrl (index.html:772:24)
+    at startPlayer (index.html:804:24)
+    at switchChannel (index.html:967:3)
+    at HTMLButtonElement.onclick (index.html:197:84)
+resolveHlsUrl @ index.html:782
+index.html:1 Access to fetch at 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=2606803&output=62' from origin 'https://a0939bdf844441c29e23bc1e37286471.msvdn.net' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+mediapolis.rai.it/relinker/relinkerServlet.htm?cont=2606803&output=62:1  Failed to load resource: net::ERR_FAILED
+index.html:782 [relinker] TypeError: Failed to fetch
+    at resolveHlsUrl (index.html:772:24)
+    at startPlayer (index.html:804:24)
+    at switchChannel (index.html:967:3)
+    at HTMLButtonElement.onclick (index.html:200:84)
+resolveHlsUrl @ index.html:782
+index.html:1 Access to fetch at 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=308718&output=62' from origin 'https://a0939bdf844441c29e23bc1e37286471.msvdn.net' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+index.html:772  GET https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=308718&output=62 net::ERR_FAILED 200 (OK)
+resolveHlsUrl @ index.html:772
+startPlayer @ index.html:804
+switchChannel @ index.html:967
+onclick @ index.html:197
+index.html:782 [relinker] TypeError: Failed to fetch
+    at resolveHlsUrl (index.html:772:24)
+    at startPlayer (index.html:804:24)
+    at switchChannel (index.html:967:3)
+    at HTMLButtonElement.onclick (index.html:197:84)
