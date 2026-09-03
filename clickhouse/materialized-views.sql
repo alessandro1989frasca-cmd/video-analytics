@@ -195,9 +195,11 @@ SELECT
     uniqState(session_id)                                           AS unique_sessions_state,
     avgState(toFloat32(startup_time_ms))                            AS startup_time_ms_state,
     avgState(
-        if(watch_time_s > 0,
-           rebuffer_time_s / watch_time_s,
-           toFloat32(0)
+        toFloat32(
+            if(watch_time_s > 0,
+               rebuffer_time_s / watch_time_s,
+               0
+            )
         )
     )                                                               AS rebuffer_ratio_state,
     avgState(toFloat32(0))                                          AS bitrate_avg_state,  -- from HEARTBEAT data
