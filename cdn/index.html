@@ -332,17 +332,17 @@ const CHANNELS = {
   rai1: {
     id: 'rai1-live',
     title: 'RAI 1',
-    relinker: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=2606803&output=62'
+    relinker: apiUrl('/api/relinker?ch=rainews')
   },
   rai2: {
     id: 'rai2-live',
     title: 'RAI 2',
-    relinker: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=308718&output=62'
+    relinker: apiUrl('/api/relinker?ch=rainews')
   },
   rainews: {
     id: 'rai-news-live',
     title: 'RAI News',
-    relinker: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=1&output=62'
+    relinker: apiUrl('/api/relinker?ch=rainews')
   }
 };
 

@@ -16,8 +16,8 @@ const PORT = Number(process.env.PORT || 8080);
 const COLLECTOR_PORT = Number(process.env.COLLECTOR_PORT || 3000);
 
 const RELINKERS = {
-  rai1: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=2606803&output=62',
-  rai2: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=308718&output=62',
+  rai1: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=1&output=62',
+  rai2: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=1&output=62',
   rainews: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=1&output=62'
 };
 
