@@ -402,6 +402,7 @@ const Analytics = (() => {
     seq++;
     const event = {
       session_id:  sessionId,
+      viewer_id:   viewerId,
       event_type:  eventType,
       timestamp:   nowMs(),
       platform:    'web',

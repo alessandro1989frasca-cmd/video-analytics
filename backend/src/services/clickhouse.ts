@@ -113,6 +113,7 @@ function flattenEvent(e: EnrichedEvent): Record<string, unknown> {
 
     // Envelope
     session_id:   e.session_id,
+    viewer_id:    e.viewer_id ?? '',
     event_type:   e.event_type,
     seq:          e.seq,
     platform:     e.platform,

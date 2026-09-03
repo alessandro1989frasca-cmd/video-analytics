@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS analytics_events
 
     -- Session envelope
     session_id          LowCardinality(String),
+    viewer_id           String,              -- anonymous client identifier
     event_type          LowCardinality(String),
     seq                 UInt32,
     platform            LowCardinality(String),
@@ -116,6 +117,7 @@ CREATE TABLE IF NOT EXISTS analytics_sessions
 (
     session_date        Date,
     session_id          String,
+    viewer_id           String,
     platform            LowCardinality(String),
     content_id          String,
     content_type        LowCardinality(String),

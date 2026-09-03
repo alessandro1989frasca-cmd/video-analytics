@@ -486,6 +486,7 @@ export class SessionManager {
 
     const event: AnalyticsEvent = {
       session_id: this.state.sessionId,
+      viewer_id: this.cfg.viewerId,
       event_type: eventType as any,
       timestamp: now(),
       platform: this.cfg.platform,

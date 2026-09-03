@@ -18,6 +18,8 @@ export interface SdkConfig {
   collectorUrl: string;
   /** SDK version string — injected at build time */
   sdkVersion: string;
+  /** Optional anonymous viewer identifier, stable across playback sessions. */
+  viewerId?: string;
   /** Platform identifier — set by each adapter */
   platform: Platform;
   /**

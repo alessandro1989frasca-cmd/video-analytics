@@ -22,6 +22,7 @@ AS
 SELECT
     event_date                                                  AS session_date,
     session_id,
+    viewer_id,
     platform,
     content_id,
     content_type,
