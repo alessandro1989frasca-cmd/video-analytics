@@ -184,6 +184,12 @@ export interface PayloadSessionEnd {
   rebuffer_time_s: number;
   /** Total number of bitrate changes */
   bitrate_change_count: number;
+  /** Startup time measured between play request and first frame */
+  startup_time_ms?: number;
+  /** Average throughput across CDN requests in this session */
+  avg_throughput_kbps?: number;
+  /** Average time-to-first-byte across CDN requests in this session */
+  avg_ttfb_ms?: number;
 }
 
 export interface PayloadHeartbeat {

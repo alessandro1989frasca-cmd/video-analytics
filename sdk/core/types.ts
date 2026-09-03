@@ -89,6 +89,8 @@ export interface SessionState {
   playRequestAt: number | null;
   /** epoch ms when FIRST_FRAME was fired */
   firstFrameAt: number | null;
+  /** play request to first-frame duration */
+  startupTimeMs: number;
   /** epoch ms of most recent HEARTBEAT or playback event */
   lastActivityAt: number;
   /** epoch ms when the current buffering event started */
@@ -105,6 +107,9 @@ export interface SessionState {
   currentResolution: string;
   /** number of bitrate changes so far */
   bitrateChangeCount: number;
+  cdnRequestCount: number;
+  totalCdnThroughputKbps: number;
+  totalCdnTtfbMs: number;
   /** epoch ms when the current pause started */
   pauseStartAt: number | null;
   /** current playback position in seconds (updated via heartbeat) */

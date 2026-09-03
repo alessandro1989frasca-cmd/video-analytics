@@ -45,14 +45,14 @@ SELECT
     CAST(JSONExtractInt(payload,   'bitrate_change_count') AS UInt32) AS bitrate_change_count,
     JSONExtractString(payload, 'reason')                             AS session_end_reason,
 
-    -- Placeholders filled by the collector via JOIN or separate inserts
-    toUInt32(0)     AS startup_time_ms,
+    -- Session-level metrics emitted by current SDKs (0 for legacy clients)
+    CAST(COALESCE(JSONExtractFloat(payload, 'startup_time_ms'), 0) AS UInt32) AS startup_time_ms,
     toUInt8(0)      AS had_error,
     toUInt8(0)      AS had_fatal_error,
     toUInt8(0)      AS video_start_failure,
     toUInt8(0)      AS exit_before_start,
-    toFloat32(0)    AS avg_throughput_kbps,
-    toFloat32(0)    AS avg_ttfb_ms,
+    CAST(COALESCE(JSONExtractFloat(payload, 'avg_throughput_kbps'), 0) AS Float32) AS avg_throughput_kbps,
+    CAST(COALESCE(JSONExtractFloat(payload, 'avg_ttfb_ms'), 0) AS Float32) AS avg_ttfb_ms,
 
     timestamp       AS session_end_ts,
     toInt64(0)      AS session_start_ts,

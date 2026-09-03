@@ -213,7 +213,10 @@ export const PAYLOAD_SCHEMAS: Record<string, object> = {
       reason:               { type: 'string', enum: ['completed', 'user_stop', 'error', 'unknown'] },
       rebuffer_count:       { type: 'integer', minimum: 0 },
       rebuffer_time_s:      { type: 'number', minimum: 0 },
-      bitrate_change_count: { type: 'integer', minimum: 0 }
+      bitrate_change_count: { type: 'integer', minimum: 0 },
+      startup_time_ms:      { type: 'number', minimum: 0 },
+      avg_throughput_kbps:  { type: 'number', minimum: 0 },
+      avg_ttfb_ms:          { type: 'number', minimum: 0 }
     },
     additionalProperties: false
   },

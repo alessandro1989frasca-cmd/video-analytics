@@ -67,6 +67,7 @@ export class SessionManager {
       seq: 0,
       playRequestAt: null,
       firstFrameAt: null,
+      startupTimeMs: 0,
       lastActivityAt: now(),
       bufferingStartAt: null,
       bufferingStartCause: null,
@@ -75,6 +76,9 @@ export class SessionManager {
       currentBitrateKbps: 0,
       currentResolution: 'unknown',
       bitrateChangeCount: 0,
+      cdnRequestCount: 0,
+      totalCdnThroughputKbps: 0,
+      totalCdnTtfbMs: 0,
       pauseStartAt: null,
       playbackPositionS: 0,
       hasFirstFrame: false,
@@ -109,6 +113,7 @@ export class SessionManager {
 
     this.state.firstFrameAt = now();
     this.state.hasFirstFrame = true;
+    this.state.startupTimeMs = startupTimeMs;
     this._emitEvent('FIRST_FRAME', { startup_time_ms: startupTimeMs });
     this._startHeartbeat();
     this._resetZombieTimer();
@@ -250,6 +255,11 @@ export class SessionManager {
     mediaType?: 'video' | 'audio' | 'subtitle' | 'muxed';
   }): void {
     if (!this.state) return;
+    if (Number.isFinite(data.throughputKbps) && Number.isFinite(data.ttfbMs)) {
+      this.state.cdnRequestCount++;
+      this.state.totalCdnThroughputKbps += Math.max(0, data.throughputKbps);
+      this.state.totalCdnTtfbMs += Math.max(0, data.ttfbMs);
+    }
     this._emitEvent('CDN_REQUEST', {
       cdn_name: data.cdnName,
       request_type: data.requestType,
@@ -358,7 +368,14 @@ export class SessionManager {
       reason,
       rebuffer_count: this.state.bufferingCount,
       rebuffer_time_s: this.state.totalBufferingMs / 1000,
-      bitrate_change_count: this.state.bitrateChangeCount
+      bitrate_change_count: this.state.bitrateChangeCount,
+      startup_time_ms: this.state.startupTimeMs,
+      avg_throughput_kbps: this.state.cdnRequestCount > 0
+        ? this.state.totalCdnThroughputKbps / this.state.cdnRequestCount
+        : 0,
+      avg_ttfb_ms: this.state.cdnRequestCount > 0
+        ? this.state.totalCdnTtfbMs / this.state.cdnRequestCount
+        : 0
     };
 
     this._emitEvent('SESSION_END', sessionEndPayload);

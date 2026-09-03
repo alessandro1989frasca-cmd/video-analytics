@@ -372,6 +372,8 @@ const Analytics = (() => {
   let bufferingStartCause = null;
   let pendingSeek = false;
   let totalBufferingMs = 0, bufferingCount = 0, bitrateChangeCount = 0;
+  let startupTimeMs = 0;
+  let cdnRequestCount = 0, totalCdnThroughputKbps = 0, totalCdnTtfbMs = 0;
   let currentBitrateKbps = 0, currentResolution = 'unknown';
   let liveJoinStart = null;
   let heartbeatTimer = null, flushTimer = null;
@@ -488,7 +490,10 @@ const Analytics = (() => {
           reason:                'user_stop',
           rebuffer_count:        bufferingCount,
           rebuffer_time_s:       totalBufferingMs / 1000,
-          bitrate_change_count:  bitrateChangeCount
+          bitrate_change_count:  bitrateChangeCount,
+          startup_time_ms:       startupTimeMs,
+          avg_throughput_kbps:   cdnRequestCount > 0 ? totalCdnThroughputKbps / cdnRequestCount : 0,
+          avg_ttfb_ms:           cdnRequestCount > 0 ? totalCdnTtfbMs / cdnRequestCount : 0
         });
         flush('channel_switch');
         clearInterval(heartbeatTimer);
@@ -505,6 +510,10 @@ const Analytics = (() => {
       totalBufferingMs  = 0;
       bufferingCount    = 0;
       bitrateChangeCount = 0;
+      startupTimeMs = 0;
+      cdnRequestCount = 0;
+      totalCdnThroughputKbps = 0;
+      totalCdnTtfbMs = 0;
       liveJoinStart     = nowMs();
       sessionCount++;
 
@@ -531,6 +540,7 @@ const Analytics = (() => {
     onFirstFrame() {
       if (firstFrameAt) return;
       const startupMs = playRequestAt ? nowMs() - playRequestAt : 0;
+      startupTimeMs   = startupMs;
       firstFrameAt    = nowMs();
       bufferingStartAt = null; // annulla buffering di startup
       emit('FIRST_FRAME', { startup_time_ms: startupMs });
@@ -607,7 +617,14 @@ const Analytics = (() => {
       updateUI();
     },
 
-    onCdnRequest(data) { emit('CDN_REQUEST', data); },
+    onCdnRequest(data) {
+      if (Number.isFinite(data.throughput_kbps) && Number.isFinite(data.ttfb_ms)) {
+        cdnRequestCount++;
+        totalCdnThroughputKbps += Math.max(0, data.throughput_kbps);
+        totalCdnTtfbMs += Math.max(0, data.ttfb_ms);
+      }
+      emit('CDN_REQUEST', data);
+    },
 
     onError(code, msg, source, fatal) {
       emit('ERROR', { error_code: code, error_message: msg, source, fatal,
