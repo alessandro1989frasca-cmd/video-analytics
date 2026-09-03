@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "6-ShzdQDuQ2wH81Z5pBVJ"
+uri = "file://cdn/index.html"
+type = "text"
+title = "RAI Live Analytics — pagina HTML per CDN"
+description = "Copia pronta da caricare su MainStreaming o su un altro hosting statico. Usa il backend pubblico Replit per relinker e raccolta analytics; RAI 1 richiede ancora un endpoint relinker con uscita italiana."
+logical_id = "905a37db-bf8a-4048-877e-4208c6159d02"
+content_hash = "sha256:330b0c0d8c09b3129ae4ba9785b86bc1ed6fb32117c794e1fc921d7f0aa6e737"
+size = 44173
+mtime_ms = 1788428167862
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:46aba595-f938-4800-9651-d40277528a69/905a37db-bf8a-4048-877e-4208c6159d02/cd563572-bf6b-4383-b892-b2e90463de48"
+storage_version_token = "1788428183139796"
+content_type = "text/html"

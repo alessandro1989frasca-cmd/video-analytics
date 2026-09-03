@@ -1,1 +1,2 @@
 - [GeoIP demo fallback](geoip-demo-fallback.md) — external approximate location is accepted for the demo; prefer local GeoLite for production.
+- [RAI live relinker geography](rai1-relinker.md) — RAI 1 returns signed HLS only to Italian callers; Replit server-side calls receive an unavailable placeholder.
