@@ -30,7 +30,9 @@ export const config = {
 
   geoip: {
     cityDbPath: optional('GEOIP_DB_PATH', '/opt/geoip/GeoLite2-City.mmdb'),
-    asnDbPath:  optional('GEOIP_ASN_DB_PATH', '/opt/geoip/GeoLite2-ASN.mmdb')
+    asnDbPath:  optional('GEOIP_ASN_DB_PATH', '/opt/geoip/GeoLite2-ASN.mmdb'),
+    externalUrl: optional('GEOIP_EXTERNAL_URL', 'https://ipwho.is'),
+    externalTimeoutMs: parseInt(optional('GEOIP_EXTERNAL_TIMEOUT_MS', '800'), 10)
   },
 
   rateLimit: {

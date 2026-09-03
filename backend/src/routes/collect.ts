@@ -86,7 +86,7 @@ const collectRoute: FastifyPluginAsync = async (fastify) => {
       // Hash the IP before storing — never persist raw IPs (GDPR)
       const clientIpHash = createHash('sha256').update(clientIp).digest('hex');
 
-      const geo = lookupGeo(clientIp);
+      const geo = await lookupGeo(clientIp);
 
       if (config.debugLogEvents) {
         request.log.debug({

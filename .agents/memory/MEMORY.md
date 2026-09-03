@@ -1,0 +1,1 @@
+- [GeoIP demo fallback](geoip-demo-fallback.md) — external approximate location is accepted for the demo; prefer local GeoLite for production.
