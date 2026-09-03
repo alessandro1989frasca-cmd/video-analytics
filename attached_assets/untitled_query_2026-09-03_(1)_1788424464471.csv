@@ -1,0 +1,2 @@
+﻿"session_id","platform","content_id",watch_time_s,rebuffer_count,rebuffer_time_s,startup_time_ms,avg_throughput_kbps,avg_ttfb_ms,"session_end_reason"
+"a2ee85ca-cd0d-4aef-b4d7-b1b8ef356ad7","web","rai1-live",0,0,0,0,0,0,"user_stop"
