@@ -113,6 +113,7 @@ export const EVENT_BATCH_SCHEMA = {
       additionalProperties: false,
       properties: {
         session_id: { type: 'string', format: 'uuid' },
+        viewer_id:  { type: 'string', minLength: 1, maxLength: 128 },
         event_type: {
           type: 'string',
           enum: [
