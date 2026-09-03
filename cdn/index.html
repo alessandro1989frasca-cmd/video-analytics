@@ -332,17 +332,17 @@ const CHANNELS = {
   rai1: {
     id: 'rai1-live',
     title: 'RAI 1',
-    relinker: '/api/relinker?ch=rai1'
+    relinker: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=2606803&output=62'
   },
   rai2: {
     id: 'rai2-live',
     title: 'RAI 2',
-    relinker: '/api/relinker?ch=rai2'
+    relinker: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=308718&output=62'
   },
   rainews: {
     id: 'rai-news-live',
     title: 'RAI News',
-    relinker: '/api/relinker?ch=rainews'
+    relinker: 'https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=1&output=62'
   }
 };
 
@@ -767,7 +767,13 @@ function uuid() {
 // =============================================================================
 async function resolveHlsUrl(channelKey) {
   try {
-    const resp = await fetch(apiUrl(`/api/relinker?ch=${channelKey}`));
+    const channel = CHANNELS[channelKey];
+    if (!channel?.relinker) throw new Error('Relinker mancante');
+    const resp = await fetch(channel.relinker, {
+      method: 'GET',
+      cache: 'no-store',
+      mode: 'cors'
+    });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const json = await resp.json();
     if (!json.url) throw new Error('URL mancante');
