@@ -1,2 +1,0 @@
-﻿"session_id",watch_time_s,rebuffer_count,rebuffer_time_s,startup_time_ms,avg_throughput_kbps,avg_ttfb_ms,"session_end_reason"
-"56b1a0be-03ff-47c9-9e3a-47a2bcec64b4",50.957,0,0,2511,38735.242,33.606895,"user_stop"
