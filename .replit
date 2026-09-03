@@ -58,3 +58,6 @@ externalPort = 80
 
 [userenv.shared]
 CLICKHOUSE_HOST = "https://i9vf91kzz1.germanywestcentral.azure.clickhouse.cloud:8443"
+CLICKHOUSE_PASSWORD = "JGek.VVp4dMB."
+CLICKHOUSE_DATABASE = "analytics"
+CLICKHOUSE_USER = "default"
