@@ -191,7 +191,7 @@
 <div class="channel-bar">
   <label>Canale:</label>
 
-  <button class="ch-btn active" data-channel="rainews" onclick="switchChannel('rainews', this)">
+  <button class="ch-btn" data-channel="rainews" onclick="switchChannel('rainews', this)">
     <span class="ch-dot"></span> RAI News
   </button>
   <button class="ch-btn" data-channel="rai2" onclick="switchChannel('rai2', this)">
@@ -213,7 +213,7 @@
   <div class="player-col">
     <div class="video-wrapper">
       <!-- controls rimosso — usiamo la barra custom sotto -->
-      <video id="video" autoplay muted playsinline></video>
+      <video id="video" muted playsinline></video>
       <div class="live-badge"><span style="width:7px;height:7px;background:#fff;border-radius:50%;animation:blink 1.2s infinite;display:inline-block"></span>&nbsp;LIVE</div>
       <div class="channel-name-overlay" id="channel-overlay">RAI News</div>
       <!-- click sul video = play/pause -->
@@ -335,7 +335,7 @@ const CHANNELS = {
   }
 };
 
-let currentChannelKey = 'rainews';
+let currentChannelKey = null;
 let hlsInstance = null;
 let sessionCount = 0;
 let playerStopped = false;
@@ -522,7 +522,7 @@ const Analytics = (() => {
       liveJoinStart     = nowMs();
       sessionCount++;
 
-      emit('SESSION_START', { autoplay: true });
+      emit('SESSION_START', { autoplay: false });
 
       // Aggiorna UI
       document.getElementById('session-id-short').textContent = sessionId.slice(0,8) + '…';
@@ -1134,7 +1134,7 @@ window.addEventListener('visibilitychange',() => {
 // =============================================================================
 const viewerId = getOrCreateViewerId();
 Analytics.init(viewerId);
-startPlayer('rainews');
+document.getElementById('channel-overlay').textContent = 'Seleziona un canale per iniziare';
 </script>
 
 </body>
