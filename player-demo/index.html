@@ -338,6 +338,7 @@ const CHANNELS = {
 let currentChannelKey = 'rainews';
 let hlsInstance = null;
 let sessionCount = 0;
+let playerStopped = false;
 
 // =============================================================================
 // VIEWER ID — persiste in localStorage per tutta la visita (e oltre)
@@ -779,6 +780,7 @@ async function startPlayer(channelKey) {
   document.getElementById('header-logo').textContent = channel.title;
   document.getElementById('channel-overlay').textContent = channel.title;
   document.getElementById('btn-stop').classList.remove('stopped');
+  document.getElementById('btn-playpause').textContent = '⏸';
 
   // Risolvi URL HLS fresco (token valido)
   const hlsUrl = await resolveHlsUrl(channelKey);
@@ -786,6 +788,7 @@ async function startPlayer(channelKey) {
     document.getElementById('channel-overlay').textContent = '⚠ Errore stream';
     return;
   }
+  playerStopped = false;
 
   // Distruggi il player precedente se esiste
   if (hlsInstance) {
@@ -952,6 +955,10 @@ function switchChannel(channelKey, btn) {
 function togglePlayPause() {
   const v = document.getElementById('video');
   const btn = document.getElementById('btn-playpause');
+  if (playerStopped) {
+    startPlayer(currentChannelKey);
+    return;
+  }
   if (v.paused) {
     v.play();
     btn.textContent = '⏸';
@@ -974,6 +981,7 @@ function stopPlayer() {
   video.removeAttribute('src');
   video.load();
   Analytics.endSession('user_stop');
+  playerStopped = true;
   document.getElementById('btn-playpause').textContent = '▶';
   document.getElementById('channel-overlay').textContent = 'Playback fermato';
   stopButton.classList.add('stopped');
