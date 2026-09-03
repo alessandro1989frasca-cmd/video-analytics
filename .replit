@@ -63,6 +63,6 @@ CLICKHOUSE_DATABASE = "analytics"
 CLICKHOUSE_USER = "default"
 
 [deployment]
-deploymentTarget = "vm"
+deploymentTarget = "autoscale"
 run = ["bash", "-lc", "(cd backend && PORT=3000 NODE_ENV=production npm start) & exec PORT=5000 COLLECTOR_PORT=3000 node player-demo/server.js"]
 build = ["bash", "-lc", "cd backend && npm ci --no-audit --no-fund && npm run build"]
